@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.5.20)  12 JUL 2026 23:53
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.5.20)  13 JUL 2026 00:20
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -877,26 +877,26 @@ Package: titlesec 2025/01/04 v2.17 Sectioning titles
 ) (./paper.aux)
 \openout1 = `paper.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 38.
-LaTeX Font Info:    ... okay on input line 38.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 40.
+LaTeX Font Info:    ... okay on input line 40.
 
 Package fontspec Info: 
 (fontspec)             Adjusting the maths setup (use [no-math] to avoid
@@ -904,56 +904,56 @@ Package fontspec Info:
 
 \symlegacymaths=\mathgroup6
 LaTeX Font Info:    Overwriting symbol font `legacymaths' in version `bold'
-(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 38.
-LaTeX Font Info:    Redeclaring math accent \acute on input line 38.
-LaTeX Font Info:    Redeclaring math accent \grave on input line 38.
-LaTeX Font Info:    Redeclaring math accent \ddot on input line 38.
-LaTeX Font Info:    Redeclaring math accent \tilde on input line 38.
-LaTeX Font Info:    Redeclaring math accent \bar on input line 38.
-LaTeX Font Info:    Redeclaring math accent \breve on input line 38.
-LaTeX Font Info:    Redeclaring math accent \check on input line 38.
-LaTeX Font Info:    Redeclaring math accent \hat on input line 38.
-LaTeX Font Info:    Redeclaring math accent \dot on input line 38.
-LaTeX Font Info:    Redeclaring math accent \mathring on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \Delta on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \Theta on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \Xi on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \Pi on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \Phi on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \Psi on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \Omega on input line 38.
-LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 38.
-LaTeX Font Info:    Redeclaring symbol font `operators' on input line 38.
+(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 40.
+LaTeX Font Info:    Redeclaring math accent \acute on input line 40.
+LaTeX Font Info:    Redeclaring math accent \grave on input line 40.
+LaTeX Font Info:    Redeclaring math accent \ddot on input line 40.
+LaTeX Font Info:    Redeclaring math accent \tilde on input line 40.
+LaTeX Font Info:    Redeclaring math accent \bar on input line 40.
+LaTeX Font Info:    Redeclaring math accent \breve on input line 40.
+LaTeX Font Info:    Redeclaring math accent \check on input line 40.
+LaTeX Font Info:    Redeclaring math accent \hat on input line 40.
+LaTeX Font Info:    Redeclaring math accent \dot on input line 40.
+LaTeX Font Info:    Redeclaring math accent \mathring on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \Delta on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \Theta on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \Xi on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \Pi on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \Phi on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \Psi on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \Omega on input line 40.
+LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 40.
+LaTeX Font Info:    Redeclaring symbol font `operators' on input line 40.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `normal' on input line 38.
+(Font)              `operators' in the math version `normal' on input line 40.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
-(Font)                  OT1/cmr/m/n --> TU/lmr/m/n on input line 38.
+(Font)                  OT1/cmr/m/n --> TU/lmr/m/n on input line 40.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `bold' on input line 38.
+(Font)              `operators' in the math version `bold' on input line 40.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
-(Font)                  OT1/cmr/bx/n --> TU/lmr/m/n on input line 38.
+(Font)                  OT1/cmr/bx/n --> TU/lmr/m/n on input line 40.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
-(Font)                  TU/lmr/m/n --> TU/lmr/m/n on input line 38.
+(Font)                  TU/lmr/m/n --> TU/lmr/m/n on input line 40.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
-(Font)                  OT1/cmr/m/it --> TU/lmr/m/it on input line 38.
+(Font)                  OT1/cmr/m/it --> TU/lmr/m/it on input line 40.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
-(Font)                  OT1/cmr/bx/n --> TU/lmr/b/n on input line 38.
+(Font)                  OT1/cmr/bx/n --> TU/lmr/b/n on input line 40.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `normal'
-(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 38.
+(Font)                  OT1/cmss/m/n --> TU/lmss/m/n on input line 40.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `normal'
-(Font)                  OT1/cmtt/m/n --> TU/lmtt/m/n on input line 38.
+(Font)                  OT1/cmtt/m/n --> TU/lmtt/m/n on input line 40.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
-(Font)                  TU/lmr/m/n --> TU/lmr/b/n on input line 38.
+(Font)                  TU/lmr/m/n --> TU/lmr/b/n on input line 40.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
-(Font)                  OT1/cmr/bx/it --> TU/lmr/b/it on input line 38.
+(Font)                  OT1/cmr/bx/it --> TU/lmr/b/it on input line 40.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
-(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 38.
+(Font)                  OT1/cmss/bx/n --> TU/lmss/b/n on input line 40.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
-(Font)                  OT1/cmtt/m/n --> TU/lmtt/b/n on input line 38.
+(Font)                  OT1/cmtt/m/n --> TU/lmtt/b/n on input line 40.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: xetex
@@ -992,7 +992,7 @@ LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: hyperref package is loaded.
 Package caption Info: End \AtBeginDocument code.
-Package hyperref Info: Link coloring OFF on input line 38.
+Package hyperref Info: Link coloring OFF on input line 40.
 (./paper.out) (./paper.out)
 \@outlinefile=\write3
 \openout3 = `paper.out'.
@@ -1023,13 +1023,13 @@ Package fontspec Info:
 (fontspec)             - 'normal' (m/n) with NFSS spec.:
 (fontspec)             <->"SimHei/OT:script=hani;language=dflt;"
 
-LaTeX Font Info:    Trying to load font information for U+msa on input line 40.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 42.
 
 
 (d:/texlive/2026/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 40.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 42.
 
 
 (d:/texlive/2026/texmf-dist/tex/latex/amsfonts/umsb.fd
@@ -1041,7 +1041,7 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 \tf@toc=\write4
 \openout4 = `paper.toc'.
 
- [3] [4] [5] [6] [7] [8] [9] [10] [11] [12] [13] [14] [15] [16]
+ [3] [4]
 
 Package fontspec Info: 
 (fontspec)             Could not resolve font "FangSong/BI" (it probably
@@ -1068,22 +1068,46 @@ Package fontspec Info:
 (fontspec)             - 'normal' (m/n) with NFSS spec.:
 (fontspec)             <->"FangSong/OT:script=hani;language=dflt;"
 
- [17]
+ [5] [6]
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `math shift' on input line 214.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `\alpha' on input line 214.
+
+
+Package hyperref Warning: Token not allowed in a PDF string (Unicode):
+(hyperref)                removing `math shift' on input line 214.
+
+
+Overfull \hbox (2.33592pt too wide) in paragraph at lines 237--246
+ [][] 
+ []
+
+[7] [8] [9] [10] [11] [12] [13] [14] [15] [16] [17]
+Overfull \hbox (85.99248pt too wide) in paragraph at lines 643--646
+[]\TU/SimSun(0)/m/n/12 模 型 的 工 程 实 现 使 用 了 \TU/lmr/m/n/12 SQLite \TU/SimSun(0)/
+m/n/12 处 理 百 万 级 发 票 数 据，| \TU/lmr/m/n/12 Python \TU/SimSun(0)/m/n/12 科 学 计 算 生
+ 态  |（\TU/lmr/m/n/12 NumPy/Pandas/Matplotlib\TU/SimSun(0)/m/n/12 ）|
+ []
+
 [18] (./paper.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2022/07/14>
  ***********
 Package rerunfilecheck Info: File `paper.out' has not changed.
-(rerunfilecheck)             Checksum: EE888287ABEB13FAF5BA9A2300FC3373;4309.
+(rerunfilecheck)             Checksum: 7C991F7A1128EA6B802431187929763B;5161.
  ) 
 Here is how much of TeX's memory you used:
- 19413 strings out of 468168
- 417426 string characters out of 5436524
- 838246 words of memory out of 5000000
- 47846 multiletter control sequences out of 15000+600000
- 639525 words of font info for 127 fonts, out of 8000000 for 9000
+ 19596 strings out of 468168
+ 428272 string characters out of 5436524
+ 841318 words of memory out of 5000000
+ 48021 multiletter control sequences out of 15000+600000
+ 639581 words of font info for 134 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 93i,13n,111p,1191b,500s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 93i,13n,111p,1191b,493s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
 Output written on paper.pdf (18 pages).
