@@ -1,0 +1,658 @@
+% !TEX program = xelatex
+\documentclass[12pt,a4paper]{ctexart}
+
+% ========== 页面设置 ==========
+\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+% ========== 页眉页脚 ==========
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{中小微企业的信贷决策研究}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ========== 标题格式 ==========
+\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+
+% ========== 文档信息 ==========
+\title{\vspace{-2cm}\heiti\zihao{2} 中小微企业的信贷决策研究\\
+\vspace{0.3cm}\normalfont\zihao{4} ——基于AHP-熵权-TOPSIS的综合评价模型}
+\author{\zihao{4} 冯浩然}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\zihao{-5}
+\vspace{0.5cm}
+{\heiti 摘要：}本文针对中小微企业信贷决策问题，基于123家有信贷记录企业和302家无信贷记录企业的发票数据，
+构建了AHP-熵权组合赋权与TOPSIS综合评价模型。首先，从进销项发票中提取15个企业级财务与行为指标；
+其次，采用层次分析法确定主观权重、熵权法确定客观权重，通过组合赋权法获得综合权重，并利用TOPSIS法
+计算企业信贷风险得分；在此基础上，依据风险评分分配差异化贷款额度（10--100万元）和利率（4\%--15\%）；
+最后，针对新冠疫情等突发因素，引入行业冲击系数对信贷策略进行调整。灵敏度分析表明，模型对权重扰动
+具有高度鲁棒性（Spearman相关系数 $>$ 0.96）。模型验证显示，风险等级与违约率呈严格单调递增关系
+（A级10.0\%，B级12.9\%，C级16.2\%，D级56.0\%），验证了模型的合理性与实用性。
+
+\vspace{0.3cm}
+{\heiti 关键词：}中小微企业；信贷决策；AHP；熵权法；TOPSIS；新冠疫情；灵敏度分析
+\end{center}
+
+\newpage
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{问题重述与分析}
+% ============================================================
+
+\subsection{问题背景}
+
+中小微企业是国民经济的重要组成部分，但由于其规模相对较小、缺少抵押资产、财务信息不透明等原因，
+银行在对其授信时面临较大的信息不对称和信用风险。银行通常依据信贷政策、企业交易票据信息以及
+上下游企业的影响力，向实力强、供求关系稳定的企业提供贷款，并对信誉高、信贷风险小的企业给予
+利率优惠。
+
+某银行对确定放贷企业的贷款额度设定为10--100万元，年利率范围为4\%--15\%，贷款期限为1年。
+附件1提供了123家有信贷记录企业的相关数据（含信誉评级和违约记录），附件2提供了302家无信贷
+记录企业的相关数据，附件3提供了银行贷款年利率与客户流失率关系的2019年统计数据。
+
+\subsection{问题分析}
+
+\textbf{问题1：}对附件1中123家企业的信贷风险进行量化分析，并在年度信贷总额固定时给出信贷策略。
+该问题的核心是\textbf{风险评估与策略优化}。由于附件1包含信誉评级和违约标签，
+可利用AHP-熵权-TOPSIS模型构建综合评价体系，并以违约标签验证模型效果。
+
+\textbf{问题2：}在问题1基础上，对附件2中302家无信贷记录企业进行风险评估，
+并在年度信贷总额为1亿元时制定信贷策略。该问题的核心是\textbf{迁移评价}——
+将问题1中建立的评价体系应用于无标签企业，在1亿元总额约束下按风险评分分配贷款。
+
+\textbf{问题3：}考虑突发因素（如新冠疫情）对不同行业、不同类别企业的影响，
+给出信贷调整策略。该问题的核心是\textbf{外部冲击量化}——通过行业分类
+和冲击系数将突发事件影响纳入风险评估框架。
+
+\subsection{总体建模思路}
+
+本文采用``特征工程 $\rightarrow$ 组合赋权 $\rightarrow$ TOPSIS评分 $\rightarrow$
+信贷策略 $\rightarrow$ 冲击调整''的技术路线，整体框架如图\ref{fig:framework}所示。
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\multicolumn{1}{|c|}{\textbf{数据预处理}} &
+\multicolumn{1}{c|}{\textbf{特征工程}} &
+\multicolumn{1}{c|}{\textbf{风险评估}} &
+\multicolumn{1}{c|}{\textbf{信贷策略}} &
+\multicolumn{1}{c|}{\textbf{冲击调整}} \\
+\hline
+发票数据清洗 & 15个企业指标 & AHP主观权重 & 利率-流失率建模 & 行业分类 \\
+SQLite入库 & 对数变换 & 熵权客观权重 & 额度按分分配 & 冲击系数 \\
+索引优化 & 极端值处理 & 组合赋权 & 利率梯级定价 & 策略再分配 \\
+\hline
+\multicolumn{5}{c}{\textbf{TOPSIS综合评分 $\rightarrow$ 灵敏度分析与模型验证}} \\
+\hline
+\end{tabular}
+\caption{总体建模框架}
+\label{fig:framework}
+\end{figure}
+
+% ============================================================
+\section{模型假设与符号说明}
+% ============================================================
+
+\subsection{基本假设}
+
+\begin{enumerate}[label=\arabic*.]
+    \item 发票数据真实反映企业的实际经营状况，无伪造或虚开发票；
+    \item 进项发票中的\textbf{有效发票}金额反映企业实际采购成本，销项发票中的\textbf{有效发票}金额反映企业实际销售收入；
+    \item 银行对信誉评级为D的企业原则上不予放贷；
+    \item 贷款利率与客户流失率的关系在附件3数据范围内可信；
+    \item 企业名称中包含的行业关键词能够反映企业实际经营行业；
+    \item 新冠疫情对不同行业的影响程度参考文献研究中的行业冲击系数。
+\end{enumerate}
+
+\subsection{符号说明}
+
+\begin{table}[H]
+\centering
+\caption{主要符号说明}
+\begin{tabular}{c|l}
+\toprule
+\textbf{符号} & \textbf{含义} \\
+\midrule
+$n$ & 企业数量 \\
+$m$ & 评价指标数量 \\
+$x_{ij}$ & 第$i$个企业在第$j$个指标上的原始值 \\
+$p_{ij}$ & 第$i$个企业在第$j$个指标上的比重 \\
+$e_j$ & 第$j$个指标的信息熵 \\
+$d_j$ & 第$j$个指标的差异系数 \\
+$w_j^{\text{AHP}}$ & 第$j$个指标的AHP主观权重 \\
+$w_j^{\text{Ent}}$ & 第$j$个指标的熵权法客观权重 \\
+$w_j$ & 第$j$个指标的组合权重 \\
+$C_i$ & 第$i$个企业的TOPSIS相对贴近度（风险得分） \\
+$D_i^+$ & 第$i$个企业到正理想解的距离 \\
+$D_i^-$ & 第$i$个企业到负理想解的距离 \\
+$r$ & 贷款年利率 \\
+$L(r)$ & 利率为$r$时的客户流失率 \\
+$\alpha$ & AHP权重占比（组合赋权参数） \\
+$\rho$ & 分辨系数（灰色关联分析用，本文未采用） \\
+$S_k$ & 第$k$个行业的疫情冲击系数 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\section{数据预处理与特征工程}
+% ============================================================
+
+\subsection{数据概况}
+
+附件1包含123家有信贷记录企业的数据，含3个工作表：（1）企业信息表（企业代号、企业名称、
+信誉评级、是否违约）；（2）进项发票信息表（210,947条记录）；（3）销项发票信息表（162,484条记录）。
+信誉评级分布为：A级27家、B级38家、C级34家、D级24家；违约企业27家，正常企业96家。
+
+附件2包含302家无信贷记录企业的数据，含企业信息表和进/销项发票信息表
+（进项395,175条，销项330,835条），共计约72.6万条发票记录。
+
+附件3包含29个数据点，记录了贷款年利率（4\%--15\%）与三个信誉等级（A、B、C）客户
+流失率的对应关系。
+
+\subsection{数据清洗}
+
+将三个附件的Excel数据导入SQLite数据库以提高查询效率，进行了以下清洗操作：
+\begin{itemize}
+    \item 删除完全为空的列（附件2进项发票信息表中有3列空列）；
+    \item 统一日期格式（附件1为日期格式，附件2为日期时间格式）；
+    \item 对发票状态进行规范化（附件1销项发票中有47条记录的状态为``\ 作废发票''，含前导空格）；
+    \item 在数据库中对企业代号、开票日期和发票状态三列建立索引，加速后续SQL聚合查询。
+\end{itemize}
+
+\subsection{特征提取}
+
+使用SQL语句对发票数据进行聚合计算，从进项和销项发票中提取了以下15个企业级指标，分为四个维度：
+
+\begin{table}[H]
+\centering
+\caption{特征指标体系}
+\begin{tabular}{c|l|l|c}
+\toprule
+\textbf{维度} & \textbf{指标} & \textbf{计算方式} & \textbf{类型} \\
+\midrule
+\multirow{6}{*}{企业实力}
+    & 销项总金额 & SUM(有效销项ABS(价税合计)) & 极大型 \\
+    & 进项总金额 & SUM(有效进项ABS(价税合计)) & 极大型 \\
+    & 利润率 & (销项-进项)/销项 & 极大型 \\
+    & 利润 & 销项总金额-进项总金额 & 极大型 \\
+    & 销项客户数 & COUNT(DISTINCT 购方单位代号) & 极大型 \\
+    & 交易网络广度 & 供应商数+客户数 & 极大型 \\
+\midrule
+\multirow{2}{*}{企业稳定性}
+    & 收入波动率 & 月度收入标准差/均值 & 极小型 \\
+    & 成本波动率 & 月度成本标准差/均值 & 极小型 \\
+\midrule
+\multirow{4}{*}{企业信誉}
+    & 销项有效率 & 有效发票数/总发票数 & 极大型 \\
+    & 进项有效率 & 有效发票数/总发票数 & 极大型 \\
+    & 销项作废率 & 作废发票数/总发票数 & 极小型 \\
+    & 进项作废率 & 作废发票数/总发票数 & 极小型 \\
+\midrule
+\multirow{3}{*}{企业成长与活跃度}
+    & 收入环比增长率 & (本月收入-上月收入)/上月收入 & 极大型 \\
+    & 综合活跃月数 & MAX(进项月数, 销项月数) & 极大型 \\
+    & 进项供应商数 & COUNT(DISTINCT 销方单位代号) & 极大型 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{特征预处理}
+
+为提高模型稳定性，对原始特征进行了以下变换：
+\begin{itemize}
+    \item \textbf{对数变换：}对金额类指标（销项总金额、进项总金额、利润）和数量类指标
+    （销项客户数、进项供应商数、交易网络广度）应用$\ln(1+x)$变换，降低极端值影响；
+    \item \textbf{非线性惩罚：}对作废率指标应用$e^{3x}-1$指数变换，使高作废率（$>30\%$）
+    受到指数级惩罚，更准确地反映发票异常行为的信用风险含义；
+    \item \textbf{极端值截断：}对收入环比增长率限制在$[-1, 2]$范围内（即-100\%至+200\%），
+    对利润率限制在$[-0.5, 0.5]$范围内，剔除微小企业因分母极小导致的异常比率；
+    \item \textbf{Winsorize处理：}对所有指标进行1\%和99\%分位数截断。
+\end{itemize}
+
+% ============================================================
+\section{信贷风险评估模型}
+% ============================================================
+
+\subsection{AHP层次分析法确定主观权重}
+
+AHP（Analytic Hierarchy Process）通过专家经验建立判断矩阵来确定指标的主观相对重要性。
+本文建立了三层层次结构：目标层（信贷风险综合评分）$\rightarrow$准则层（企业实力B1、
+企业稳定性B2、企业信誉B3、企业成长B4）$\rightarrow$指标层（15个具体指标）。
+
+\subsubsection{准则层判断矩阵}
+
+根据信贷风险评价的领域知识，企业实力最为重要，其次为企业信誉、企业稳定性，最后为企业成长。
+准则层判断矩阵如下：
+
+\begin{equation}
+\mathbf{B} = \begin{bmatrix}
+1 & 3 & 2 & 4 \\
+1/3 & 1 & 1/2 & 2 \\
+1/2 & 2 & 1 & 3 \\
+1/4 & 1/2 & 1/3 & 1
+\end{bmatrix}
+\end{equation}
+
+采用几何平均法计算权重，结果为：
+$\mathbf{w}_B = (0.467, 0.160, 0.278, 0.095)^T$。
+一致性检验结果为：$\lambda_{\max}=4.031$，$CI=0.011$，$CR=0.0093 < 0.10$，通过一致性检验。
+
+\subsubsection{综合权重合成}
+
+各准则下指标采用均权分配，最终AHP综合权重通过准则权重与准则内指标权重相乘得到。
+
+\subsection{熵权法确定客观权重}
+
+熵权法基于信息论原理，通过指标数据的离散程度来确定客观权重。差异系数越大，
+说明该指标提供的信息量越大，应赋予更大权重。
+
+具体步骤如下：
+\begin{enumerate}
+    \item 计算第$j$个指标下第$i$个企业的比重：$p_{ij} = x'_{ij} / \sum_{i=1}^{n} x'_{ij}$
+    \item 计算第$j$个指标的信息熵：$e_j = -\frac{1}{\ln n}\sum_{i=1}^{n} p_{ij}\ln(p_{ij} + \varepsilon)$，
+          其中$\varepsilon=10^{-12}$防止$\ln(0)$
+    \item 计算差异系数：$d_j = 1 - e_j$
+    \item 计算权重：$w_j^{\text{Ent}} = d_j / \sum_{j=1}^{m} d_j$
+\end{enumerate}
+
+\subsection{组合赋权}
+
+为兼顾主观经验与客观数据，采用线性加权法进行组合赋权：
+
+\begin{equation}
+w_j = \alpha \cdot w_j^{\text{AHP}} + (1-\alpha) \cdot w_j^{\text{Ent}}, \quad \alpha = 0.6
+\end{equation}
+
+其中$\alpha=0.6$的选择是基于以下考量：在信贷风险评价中，专家的经验判断（AHP）
+通常比纯数据驱动的权重（熵权法）更可靠，尤其是在某些指标（如收入环比增长率）
+可能因数据噪声而产生过高熵权时。AHP占比较高可以有效地抑制噪声指标对模型的
+过度影响。
+
+\subsection{TOPSIS综合评价}
+
+TOPSIS（Technique for Order Preference by Similarity to Ideal Solution）通过计算
+各评价对象与理想解和负理想解的距离来进行排序。
+
+算法步骤如下：
+
+\textbf{步骤1：指标正向化。}将各类指标统一转换为极大型（越大越好）。四种指标类型的
+转换公式如下：
+
+\begin{itemize}
+    \item 极大型：$x'_{ij} = \dfrac{x_{ij} - \min(x_j)}{\max(x_j) - \min(x_j)}$
+    \item 极小型：$x'_{ij} = \dfrac{\max(x_j) - x_{ij}}{\max(x_j) - \min(x_j)}$
+    \item 中间型：$x'_{ij} = 1 - \dfrac{|x_{ij} - x_{\text{best}}|}{\max|x_{ij} - x_{\text{best}}|}$
+    \item 区间型：在区间$[a,b]$内取1，区间外线性递减
+\end{itemize}
+
+\textbf{步骤2：向量归一化。}
+\begin{equation}
+z_{ij} = \frac{x'_{ij}}{\sqrt{\sum_{i=1}^{n} (x'_{ij})^2}}
+\end{equation}
+
+\textbf{步骤3：加权矩阵。}
+\begin{equation}
+v_{ij} = w_j \cdot z_{ij}
+\end{equation}
+
+\textbf{步骤4：确定正、负理想解。}
+\begin{equation}
+V^+ = (\max_i v_{i1}, \max_i v_{i2}, \ldots, \max_i v_{im}), \quad
+V^- = (\min_i v_{i1}, \min_i v_{i2}, \ldots, \min_i v_{im})
+\end{equation}
+
+\textbf{步骤5：计算欧氏距离。}
+\begin{equation}
+D_i^+ = \sqrt{\sum_{j=1}^{m}(v_{ij} - v_j^+)^2}, \quad
+D_i^- = \sqrt{\sum_{j=1}^{m}(v_{ij} - v_j^-)^2}
+\end{equation}
+
+\textbf{步骤6：计算相对贴近度（风险得分）。}
+\begin{equation}
+C_i = \frac{D_i^-}{D_i^+ + D_i^-}, \quad C_i \in [0, 1]
+\end{equation}
+
+$C_i$越大，表示企业越接近正理想解，即信用状况越好、风险越低。
+按$C_i$降序排列即为企业信用风险从低到高的排名。
+
+\subsection{模型验证}
+
+\subsubsection{违约标签验证}
+
+利用附件1中27家违约企业和96家正常企业的标签进行验证：
+\begin{itemize}
+    \item 违约企业平均TOPSIS得分：0.1811
+    \item 正常企业平均TOPSIS得分：0.2329
+    \item 差值：0.0518（违约企业得分显著低于正常企业）
+\end{itemize}
+
+\subsubsection{风险等级违约率单调性}
+
+将123家企业按TOPSIS得分从高到低分为A（前25\%）、B（25\%--50\%）、
+C（50\%--80\%）、D（后20\%）四个风险等级，各等级的违约率如表\ref{tab:default_rate}所示。
+
+\begin{table}[H]
+\centering
+\caption{各风险等级违约率}
+\label{tab:default_rate}
+\begin{tabular}{c|cccc}
+\toprule
+\textbf{风险等级} & A & B & C & D \\
+\midrule
+企业数量 & 30 & 31 & 37 & 25 \\
+违约数量 & 3 & 4 & 6 & 14 \\
+违约率 & 10.0\% & 12.9\% & 16.2\% & 56.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+违约率随风险等级严格单调递增，D级违约率高达56.0\%，验证了模型的违约识别能力。
+
+\subsubsection{模型评级与银行评级对比}
+
+\begin{table}[H]
+\centering
+\caption{模型评级与银行原始评级交叉表}
+\label{tab:crosstab}
+\begin{tabular}{c|cccc|c}
+\toprule
+& \textbf{模型A} & \textbf{模型B} & \textbf{模型C} & \textbf{模型D} & \textbf{合计} \\
+\midrule
+银行A & 10 & 11 & 6 & 0 & 27 \\
+银行B & 9 & 9 & 17 & 3 & 38 \\
+银行C & 8 & 8 & 9 & 9 & 34 \\
+银行D & 1 & 4 & 6 & 13 & 24 \\
+\midrule
+合计 & 28 & 32 & 38 & 25 & 123 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+完全一致率为33.3\%，相邻一致率（相差不超过1级）为81.3\%。两种评级体系的不完全一致
+是合理的：模型基于客观发票数据，而银行评级基于信贷员的主观综合判断，两者维度互补。
+
+% ============================================================
+\section{信贷策略制定模型}
+% ============================================================
+
+\subsection{利率-流失率关系建模}
+
+利用附件3中29组利率-流失率数据，对A、B、C三个信誉等级分别进行二次多项式拟合：
+
+\begin{equation}
+L_k(r) = a_k r^2 + b_k r + c_k, \quad k \in \{A, B, C\}
+\end{equation}
+
+拟合结果：
+\begin{itemize}
+    \item A级：$L_A(r) = -76.41r^2 + 21.98r - 0.697$，$R^2 = 0.993$
+    \item B级：$L_B(r) = -67.93r^2 + 20.21r - 0.650$，$R^2 = 0.995$
+    \item C级：$L_C(r) = -63.94r^2 + 19.57r - 0.639$，$R^2 = 0.995$
+\end{itemize}
+
+三个等级的$R^2$均大于0.99，拟合效果优异。流失率随利率递增：在4\%利率时流失率接近0\%，
+在15\%利率时流失率约为88\%--92\%。
+
+\subsection{信贷额度与利率分配策略}
+
+\textbf{额度分配原则：}
+\begin{itemize}
+    \item 风险等级为D的企业不予放贷（贷款额度为0）；
+    \item A、B、C级企业的贷款额度按TOPSIS得分比例分配，限制在10--100万元；
+    \item 当实际总额与预算有偏差时，通过迭代再分配算法调整至收敛（误差$<0.05\%$）。
+\end{itemize}
+
+\textbf{利率定价原则：}
+\begin{itemize}
+    \item 基准利率：A级4\%，B级6.5\%，C级10\%；
+    \item 在基准利率基础上，根据TOPSIS得分进行微小浮动（$\pm 1\%$），得分高的企业享受更低利率；
+    \item 利率严格限定在4\%--15\%范围内。
+\end{itemize}
+
+\subsection{问题1与问题2的信贷策略}
+
+\textbf{问题1（123家企业，总额8,000万元）：}
+\begin{itemize}
+    \item 放贷企业：98家（79.7\%），D级25家不放贷
+    \item 贷款总额度：8,000万元（预算利用率100\%）
+    \item 单户额度：64--100万元，中位数81万元
+    \item 利率：A级均值4.6\%，B级均值7.4\%，C级均值11.0\%
+    \item 预期年利息收入：约570万元
+\end{itemize}
+
+\textbf{问题2（302家企业，总额10,000万元）：}
+\begin{itemize}
+    \item 放贷企业：241家（79.8\%），D级61家不放贷
+    \item 贷款总额度：10,000万元（预算利用率100\%）
+    \item 单户额度：31--100万元，中位数37万元
+    \item 利率：A级均值4.7\%，B级均值7.4\%，C级均值11.0\%
+    \item 预期年利息收入：约790万元
+\end{itemize}
+
+% ============================================================
+\section{突发因素影响下的信贷调整策略}
+% ============================================================
+
+\subsection{行业分类方法}
+
+从企业名称中提取行业关键词，将302家企业分为四类：
+\begin{itemize}
+    \item \textbf{严重负面行业（3家）：}旅游、酒店、餐饮、影院等——直接受到疫情封控冲击，客流量骤降；
+    \item \textbf{中度负面行业（69家）：}建筑、制造、批发零售、物流运输等——受供应链中断和消费萎缩影响；
+    \item \textbf{正面/轻影响行业（43家）：}医疗、科技、信息技术、电子商务等——需求增长或影响有限；
+    \item \textbf{其他行业（187家）：}无法从名称中识别行业类型，默认为中性影响。
+\end{itemize}
+
+\subsection{冲击系数设定}
+
+基于文献研究\cite{ref_covid}，新冠疫情对不同行业的影响差异显著：
+\begin{itemize}
+    \item 严重负面行业：冲击系数 $S=1.30$（风险上调30\%）
+    \item 中度负面行业：冲击系数 $S=1.15$（风险上调15\%）
+    \item 其他行业：冲击系数 $S=1.00$（维持不变）
+    \item 正面/轻影响行业：冲击系数 $S=0.90$（风险下调10\%）
+\end{itemize}
+
+\subsection{调整算法}
+
+\begin{enumerate}
+    \item 调整后风险得分：$C'_i = C_i / S_k$，其中$S_k$为企业$i$所属行业$k$的冲击系数；
+    \item 按调整后得分重新排序并重新划分风险等级；
+    \item 利率调整：原始等级基准利率 + 行业利率调整项（严重负面+2\%，中度负面+1\%，正面-1\%）；
+    \item 额度按调整后得分比例重新分配（10--100万元约束），迭代至预算收敛。
+\end{enumerate}
+
+\subsection{调整结果分析}
+
+\begin{table}[H]
+\centering
+\caption{疫情调整前后各行业对比}
+\label{tab:covid}
+\begin{tabular}{c|cccc}
+\toprule
+\textbf{行业类别} & \textbf{企业数} & \textbf{调整前均额(万)} & \textbf{调整后均额(万)} & \textbf{等级变化数} \\
+\midrule
+严重负面 & 3 & 40.1 & 22.4 & 3 \\
+中度负面 & 69 & 35.7 & 21.9 & 29 \\
+其他 & 187 & 42.0 & 38.7 & 25 \\
+正面/轻影响 & 43 & 30.7 & 37.5 & 23 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+共83家企业（27.5\%）的风险等级发生了调整：
+严重负面行业企业的平均贷款额度下降约44\%，正面行业企业的平均额度上升约22\%，
+调整方向符合风险缓释的实际需求。
+
+% ============================================================
+\section{灵敏度分析}
+% ============================================================
+
+\subsection{权重扰动分析}
+
+为检验模型对权重变化的鲁棒性，对每个指标的权重进行100次随机$\pm 10\%$扰动，
+计算扰动后排名与原始排名的Spearman和Kendall秩相关系数：
+
+\begin{itemize}
+    \item Spearman相关系数：均值0.965，最小值0.949
+    \item Kendall相关系数：均值0.848，最小值0.815
+\end{itemize}
+
+Spearman相关系数均值$>0.85$，表明模型排名对权重扰动具有高度稳健性。
+
+\subsection{指标移除分析}
+
+逐一移除每个指标后重新计算TOPSIS排名，观察排名变化。由于TOPSIS方法的几何特性，
+移除单个指标会改变整个评价空间的几何结构，但各指标移除后的排名相关性分布反映了
+各指标的相对影响程度。结果再次验证了组合赋权（$\alpha=0.6$）策略能有效减少
+任何单一指标对最终排名的过度影响。
+
+% ============================================================
+\section{模型的优点与不足}
+% ============================================================
+
+\subsection{模型优点}
+
+\begin{enumerate}
+    \item \textbf{主客观结合：}AHP与熵权法的组合赋权兼顾了专家经验与客观数据，避免了
+    纯主观赋权的主观性和纯客观赋权可能被噪声数据误导的风险。
+    \item \textbf{可解释性强：}TOPSIS评价结果直观易懂（0--1得分），风险等级与违约率
+    呈严格单调关系，便于银行信贷人员理解和应用。
+    \item \textbf{计算高效：}利用SQLite数据库和SQL聚合查询处理百万级发票数据，
+    特征工程在数秒内完成，模型训练和评分可实时进行。
+    \item \textbf{鲁棒性好：}灵敏度分析验证了模型对权重扰动的稳健性，排名结果可信度高。
+    \item \textbf{可扩展性：}本文的行业分类+冲击系数框架可推广到其他突发事件
+    （如自然灾害、贸易摩擦等）的风险评估场景。
+\end{enumerate}
+
+\subsection{模型不足与改进方向}
+
+\begin{enumerate}
+    \item \textbf{行业分类精度有限：}由于企业名称经过脱敏处理（如``***电器销售有限公司''），
+    62\%的企业无法精确归类，影响了问题3调整策略的精度。可考虑利用发票中的交易对手信息
+    辅助行业识别。
+    \item \textbf{时序信息利用不足：}当前模型主要使用聚合统计数据，未充分利用发票的时间序列
+    特征（如季节性、趋势变化）。引入LSTM或Transformer等时序模型可能提升违约预测精度。
+    \item \textbf{收入环比增长率熵权偏高：}该指标因方差过大导致熵权较高（0.388原始值），
+    虽然通过AHP调节（$\alpha=0.6$）后降至0.184，但仍有一定影响。建议改用更稳健
+    的成长性指标（如多期移动平均增长率）。
+    \item \textbf{未利用上下游网络信息：}发票数据中隐含了企业间的交易网络结构，
+    图神经网络（GNN）等方法可利用网络拓扑信息提升风险传染的识别能力。
+\end{enumerate}
+
+% ============================================================
+\section{结论}
+% ============================================================
+
+本文针对中小微企业信贷决策问题，构建了基于AHP-熵权组合赋权的TOPSIS综合评价模型，
+完成了以下工作：
+
+\begin{enumerate}
+    \item 从进销项发票数据中提取了15个企业级财务与行为指标，构建了涵盖企业实力、
+    稳定性、信誉和成长四个维度的风险评价指标体系；
+    \item 建立了AHP-熵权组合赋权（$\alpha=0.6$）的TOPSIS风险评估模型，
+    模型验证显示风险等级与违约率严格单调递增，D级违约率高达56.0\%；
+    \item 基于附件3数据拟合了利率-流失率二次函数关系（$R^2 > 0.99$），
+    并制定了差异化信贷策略——在总额约束下按风险得分分配额度和梯级利率；
+    \item 引入行业冲击系数框架，量化了新冠疫情对302家企业信贷策略的差异化影响，
+    严重负面行业额度平均下降44\%，正面行业额度上升22\%；
+    \item 灵敏度分析验证了模型的鲁棒性（Spearman $\rho = 0.965$）。
+\end{enumerate}
+
+模型结果为银行在控制信贷风险的前提下最大化收益提供了量化决策支持，
+为中小微企业融资难问题提供了一种基于数据驱动的解决方案。
+
+% ============================================================
+\begin{thebibliography}{99}
+
+\bibitem{ref_ahp} Saaty, T. L. (1980). \textit{The Analytic Hierarchy Process}. McGraw-Hill.
+
+\bibitem{ref_topsis} Hwang, C. L., \& Yoon, K. (1981). \textit{Multiple Attribute Decision Making: Methods and Applications}. Springer-Verlag.
+
+\bibitem{ref_entropy} Shannon, C. E. (1948). A mathematical theory of communication. \textit{Bell System Technical Journal}, 27(3), 379--423.
+
+\bibitem{ref_cumcm} 全国大学生数学建模竞赛组委会. 2020年高教社杯全国大学生数学建模竞赛C题.
+
+\bibitem{ref_covid} 刘超, 王海军. 新冠肺炎疫情对中小企业的冲击与金融纾困[J]. \textit{清华金融评论}, 2020(6).
+
+\bibitem{ref_combined} 程扬, 周大勇, 程帆, 商瑞杰. 基于组合赋权法的中小微企业信贷风险量化及预测[J]. \textit{系统工程}, 2023(1): 140--151.
+
+\bibitem{ref_sme} 罗胜尹, 彭睿杰, 胡静. 基于中小微企业信贷风险和银行收益的信贷决策研究[J]. \textit{中国集体经济}, 2021(27): 79--80.
+
+\bibitem{ref_churn} 中国银行业协会. 新冠肺炎疫情下的中小微企业经营风险分析和应对[R]. 2020年4月.
+
+\end{thebibliography}
+
+\newpage
+\section*{附录}
+
+\subsection*{附录A：模型主要程序模块}
+
+模型实现采用Python语言，包含以下核心模块：
+
+\begin{itemize}
+    \item \texttt{data\_loader.py}：数据加载与SQLite入库
+    \item \texttt{feature\_engineer.py}：特征工程（发票聚合$\rightarrow$企业指标）
+    \item \texttt{risk\_model.py}：AHP+熵权+TOPSIS风险评估
+    \item \texttt{credit\_strategy.py}：信贷策略制定与疫情调整
+    \item \texttt{sensitivity.py}：灵敏度分析
+    \item \texttt{visualize.py}：可视化图表生成
+    \item \texttt{utils.py}：评价模型公共工具函数库
+\end{itemize}
+
+完整代码开源托管于GitHub：
+\url{https://github.com/wanbro333/evalution_model_test}
+
+\subsection*{附录B：组合权重表}
+
+\begin{table}[H]
+\centering
+\caption{15个指标的组合权重}
+\begin{tabular}{l|c|c|c}
+\toprule
+\textbf{指标} & \textbf{AHP权重} & \textbf{熵权} & \textbf{组合权重($\alpha=0.6$)} \\
+\midrule
+销项总金额 & 0.067 & 0.060 & 0.064 \\
+进项总金额 & 0.067 & 0.052 & 0.061 \\
+利润率 & 0.067 & 0.045 & 0.058 \\
+销项客户数 & 0.067 & 0.093 & 0.077 \\
+进项供应商数 & 0.067 & 0.067 & 0.067 \\
+交易网络广度 & 0.067 & 0.063 & 0.065 \\
+收入波动率 & 0.080 & 0.027 & 0.059 \\
+成本波动率 & 0.080 & 0.031 & 0.060 \\
+销项有效率 & 0.069 & 0.026 & 0.052 \\
+进项有效率 & 0.069 & 0.026 & 0.052 \\
+销项作废率 & 0.069 & 0.019 & 0.049 \\
+进项作废率 & 0.069 & 0.023 & 0.051 \\
+收入环比增长率 & 0.048 & 0.388 & 0.184 \\
+综合活跃月数 & 0.048 & 0.042 & 0.046 \\
+利润 & 0.067 & 0.038 & 0.055 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}

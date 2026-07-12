@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中小微企业信贷决策 — 数据看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f5f2;
+  --bg-card: #ffffff;
+  --text: #1a2332;
+  --text-secondary: #5a6c7d;
+  --navy: #1a2332;
+  --slate: #2c3e50;
+  --teal: #0d7377;
+  --teal-light: #14a3a8;
+  --gold: #c9a93e;
+  --gold-light: #f0d97e;
+  --red: #c0392b;
+  --orange: #e67e22;
+  --green: #27ae60;
+  --blue: #2980b9;
+  --border: #e8e5df;
+  --shadow: 0 1px 3px rgba(26,35,50,0.06), 0 4px 12px rgba(26,35,50,0.04);
+  --radius: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Navigation ---- */
+nav {
+  background: var(--navy);
+  padding: 0 40px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+}
+nav .logo {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 900;
+  font-size: 20px;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+nav .logo span { color: var(--gold); }
+nav .nav-links { display: flex; gap: 24px; list-style: none; }
+nav .nav-links a {
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: color 0.2s;
+}
+nav .nav-links a:hover { color: var(--gold); }
+
+/* ---- Hero ---- */
+.hero {
+  background: linear-gradient(135deg, #1a2332 0%, #1a3645 40%, #0d4a4f 100%);
+  padding: 80px 40px 60px;
+  text-align: center;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(201,169,62,0.08) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.hero h1 {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 900;
+  font-size: 42px;
+  line-height: 1.3;
+  max-width: 800px;
+  margin: 0 auto 16px;
+  position: relative;
+}
+.hero h1 em {
+  font-style: normal;
+  color: var(--gold);
+}
+.hero p {
+  font-size: 16px;
+  color: rgba(255,255,255,0.6);
+  max-width: 600px;
+  margin: 0 auto;
+  font-weight: 300;
+  position: relative;
+}
+
+/* ---- Stats Row ---- */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  max-width: 1200px;
+  margin: -40px auto 0;
+  padding: 0 40px;
+  position: relative;
+  z-index: 10;
+}
+.stat-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+.stat-card .stat-value {
+  font-family: 'Inter', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+.stat-card .stat-value.gold { color: var(--gold); }
+.stat-card .stat-value.teal { color: var(--teal); }
+.stat-card .stat-value.red { color: var(--red); }
+.stat-card .stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-weight: 500;
+}
+.stat-card .stat-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+/* ---- Sections ---- */
+.container { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+
+.section { margin: 60px 0; }
+.section-header { margin-bottom: 32px; }
+.section-num {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--teal);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.section-title {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--navy);
+  line-height: 1.3;
+}
+.section-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  max-width: 600px;
+}
+
+/* ---- Chart Grid ---- */
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.chart-grid.full { grid-template-columns: 1fr; }
+.chart-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+
+.chart-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.chart-card h3 {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--navy);
+  margin-bottom: 16px;
+}
+.chart-container { width: 100%; height: 400px; }
+.chart-container.tall { height: 500px; }
+.chart-container.short { height: 280px; }
+
+/* ---- Info Card ---- */
+.info-card {
+  background: linear-gradient(135deg, #f0f7f7 0%, #f7f5f2 100%);
+  border-radius: var(--radius);
+  padding: 32px;
+  border: 1px solid rgba(13,115,119,0.12);
+}
+.info-card h3 {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--navy);
+  margin-bottom: 12px;
+}
+.info-card p { color: var(--text-secondary); font-size: 15px; line-height: 1.8; }
+.info-card .highlight { color: var(--teal); font-weight: 600; }
+
+/* ---- Table ---- */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border);
+}
+.data-table td {
+  padding: 12px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.data-table tr:hover td { background: #faf9f7; }
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.badge-a { background: #e8f5e9; color: #1b5e20; }
+.badge-b { background: #e3f2fd; color: #0d47a1; }
+.badge-c { background: #fff3e0; color: #e65100; }
+.badge-d { background: #ffebee; color: #b71c1c; }
+
+/* ---- Footer ---- */
+footer {
+  background: var(--navy);
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+  padding: 40px;
+  font-size: 13px;
+  margin-top: 80px;
+}
+footer a { color: var(--gold); text-decoration: none; }
+
+/* ---- Responsive ---- */
+@media (max-width: 900px) {
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .chart-grid { grid-template-columns: 1fr; }
+  .chart-grid.three { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 28px; }
+  nav { padding: 0 20px; }
+  .container { padding: 0 20px; }
+  .stats-row { padding: 0 20px; }
+}
+@media (max-width: 500px) {
+  .stats-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <div class="logo">信贷<span>决策</span>看板</div>
+  <ul class="nav-links">
+    <li><a href="#overview">概览</a></li>
+    <li><a href="#risk">风险评估</a></li>
+    <li><a href="#strategy">信贷策略</a></li>
+    <li><a href="#covid">疫情调整</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <h1>中小微企业<em>信贷决策</em>数据看板</h1>
+  <p>基于AHP-熵权-TOPSIS模型，对425家企业发票数据进行分析，为银行信贷决策提供量化支持</p>
+</section>
+
+<!-- Stats Cards -->
+<div class="stats-row" id="overview">
+  <div class="stat-card">
+    <div class="stat-value teal">425</div>
+    <div class="stat-label">评估企业总数</div>
+    <div class="stat-sub">123家有记录 + 302家无记录</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value gold">1.8<span style="font-size:20px">亿</span></div>
+    <div class="stat-label">信贷投放总额</div>
+    <div class="stat-sub">问题1: 0.8亿 + 问题2: 1.0亿</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">4<span style="font-size:16px">.0%</span>–11<span style="font-size:16px">.0%</span></div>
+    <div class="stat-label">贷款利率区间</div>
+    <div class="stat-sub">按风险等级差异化定价</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value red">56<span style="font-size:16px">.0%</span></div>
+    <div class="stat-label">D级企业违约率</div>
+    <div class="stat-sub">模型识别出最高风险群体</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Section 1: Risk Assessment -->
+  <section class="section" id="risk">
+    <div class="section-header">
+      <div class="section-num">01 / 风险评估</div>
+      <div class="section-title">企业信贷风险量化评分</div>
+      <div class="section-desc">TOPSIS综合得分越高表示企业信用越好、违约风险越低。模型验证显示违约率随风险等级严格递增。</div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h3>Top 20 风险最低企业（附件1）</h3>
+        <div class="chart-container" id="chart-ranking-1"></div>
+      </div>
+      <div class="chart-card">
+        <h3>风险等级与违约率 — 单调性验证</h3>
+        <div class="chart-container" id="chart-default-rate"></div>
+      </div>
+    </div>
+
+    <div class="chart-grid three" style="margin-top:24px">
+      <div class="chart-card">
+        <h3>附件1风险等级分布</h3>
+        <div class="chart-container short" id="chart-pie-1"></div>
+      </div>
+      <div class="chart-card">
+        <h3>附件2风险等级分布</h3>
+        <div class="chart-container short" id="chart-pie-2"></div>
+      </div>
+      <div class="chart-card">
+        <h3>指标权重分布</h3>
+        <div class="chart-container short" id="chart-weights"></div>
+      </div>
+    </div>
+
+    <div class="info-card" style="margin-top:24px">
+      <h3>模型解读</h3>
+      <p>
+        模型采用<span class="highlight">AHP（层次分析法）</span>确定主观权重（占60%）+
+        <span class="highlight">熵权法</span>确定客观权重（占40%），
+        通过<span class="highlight">TOPSIS法</span>综合评分。
+        违约企业平均得分 <span class="highlight">0.18</span>，正常企业平均得分 <span class="highlight">0.23</span>，
+        两者差异显著，证明模型能有效区分不同信用水平的企业。
+      </p>
+    </div>
+  </section>
+
+  <!-- Section 2: Credit Strategy -->
+  <section class="section" id="strategy">
+    <div class="section-header">
+      <div class="section-num">02 / 信贷策略</div>
+      <div class="section-title">差异化信贷方案</div>
+      <div class="section-desc">按风险评分分配贷款额度（10-100万元），按风险等级梯级定价（4%-15%）。D级企业不予放贷。</div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h3>利率与客户流失率关系曲线</h3>
+        <div class="chart-container" id="chart-rate-churn"></div>
+      </div>
+      <div class="chart-card">
+        <h3>问题2：302家企业贷款额度分配</h3>
+        <div class="chart-container" id="chart-loan-dist"></div>
+      </div>
+    </div>
+
+    <!-- Strategy Summary Table -->
+    <div class="chart-card" style="margin-top:24px">
+      <h3>信贷策略汇总</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>指标</th><th>问题1（123家）</th><th>问题2（302家）</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>信贷总额</td><td>8,000万元</td><td>10,000万元（1亿元）</td></tr>
+          <tr><td>放贷企业数</td><td>98家（79.7%）</td><td>241家（79.8%）</td></tr>
+          <tr><td>不放贷（D级）</td><td>25家</td><td>61家</td></tr>
+          <tr><td>单户额度范围</td><td>64–100万元</td><td>31–100万元</td></tr>
+          <tr><td>额度中位数</td><td>81万元</td><td>37万元</td></tr>
+          <tr><td>A级平均利率</td><td>4.60%</td><td>4.68%</td></tr>
+          <tr><td>B级平均利率</td><td>7.38%</td><td>7.43%</td></tr>
+          <tr><td>C级平均利率</td><td>10.96%</td><td>10.97%</td></tr>
+          <tr><td>预期年利息收入</td><td>约570万元</td><td>约790万元</td></tr>
+          <tr><td>预算利用率</td><td><span class="badge badge-a">100%</span></td><td><span class="badge badge-a">100%</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Section 3: COVID Adjustment -->
+  <section class="section" id="covid">
+    <div class="section-header">
+      <div class="section-num">03 / 突发因素</div>
+      <div class="section-title">新冠疫情影响的信贷调整</div>
+      <div class="section-desc">识别疫情对不同行业的差异化冲击，调整风险评分和贷款条件，确保信贷资源配置到最需要的企业。</div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h3>各行业调整前后平均贷款额度对比</h3>
+        <div class="chart-container" id="chart-covid-loan"></div>
+      </div>
+      <div class="chart-card">
+        <h3>风险等级调整流向</h3>
+        <div class="chart-container" id="chart-grade-flow"></div>
+      </div>
+    </div>
+
+    <div class="info-card" style="margin-top:24px;">
+      <h3>疫情调整原则</h3>
+      <p>
+        <strong>严重负面行业</strong>（旅游、酒店、餐饮等3家）：冲击系数 <span class="highlight">1.30</span>，
+        风险上调30%，额度平均下降<span class="highlight">44%</span>，利率上浮2%<br>
+        <strong>中度负面行业</strong>（建筑、制造、批发零售等69家）：冲击系数 <span class="highlight">1.15</span>，
+        额度平均下降<span class="highlight">39%</span>，利率上浮1%<br>
+        <strong>正面/轻影响行业</strong>（医疗、科技、信息技术等43家）：冲击系数 <span class="highlight">0.90</span>，
+        额度平均上升<span class="highlight">22%</span>，利率优惠1%<br>
+        共<span class="highlight">83家企业</span>（27.5%）的风险等级在调整后发生变化。
+      </p>
+    </div>
+  </section>
+
+  <!-- Section 4: Sensitivity -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-num">04 / 可靠性</div>
+      <div class="section-title">模型稳健性验证</div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h3>权重扰动灵敏度（100次±10%扰动）</h3>
+        <div class="chart-container" id="chart-sensitivity"></div>
+      </div>
+      <div class="chart-card">
+        <h3>模型评级 vs 银行原始评级</h3>
+        <div class="chart-container" id="chart-crosstab"></div>
+      </div>
+    </div>
+    <div class="info-card" style="margin-top:24px">
+      <h3>验证结论</h3>
+      <p>
+        ✅ Spearman秩相关系数 <span class="highlight">0.965 > 0.85</span> — 模型对权重变化高度稳健<br>
+        ✅ AHP一致性检验 <span class="highlight">CR = 0.0093 < 0.10</span> — 判断矩阵通过一致性检验<br>
+        ✅ 利率-流失率拟合 <span class="highlight">R² > 0.99</span> — 三个等级均拟合优良<br>
+        ✅ 模型与银行评级相邻一致率 <span class="highlight">81.3%</span> — 客观与主观评价基本一致
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <p>中小微企业信贷决策模型 &copy; 2020 数学建模国赛C题 | 作者：冯浩然</p>
+  <p style="margin-top:4px">代码开源：<a href="https://github.com/wanbro333/evalution_model_test">github.com/wanbro333/evalution_model_test</a></p>
+</footer>
+
+<script>
+// ========== Color Palette ==========
+const COLORS = {
+  navy: '#1a2332', teal: '#0d7377', gold: '#c9a93e',
+  green: '#27ae60', blue: '#2980b9', orange: '#e67e22', red: '#c0392b',
+  a: '#27ae60', b: '#2980b9', c: '#e67e22', d: '#c0392b'
+};
+
+// ========== Helper: Init Chart ==========
+function initChart(id) {
+  const el = document.getElementById(id);
+  const chart = echarts.init(el);
+  window.addEventListener('resize', () => chart.resize());
+  return chart;
+}
+
+// ========== Chart 1: Top 20 Ranking ==========
+(function(){
+  const chart = initChart('chart-ranking-1');
+  const firms = ['E38','E40','E46','E6','E28','E32','E24','E12','E16','E4',
+                 'E60','E89','E103','E23','E61','E21','E2','E1','E120','E3'];
+  const scores = [0.848,0.783,0.760,0.758,0.743,0.740,0.661,0.638,0.627,0.626,
+                  0.503,0.477,0.413,0.412,0.409,0.407,0.405,0.404,0.291,0.290];
+  const grades = ['A','A','A','A','A','A','A','A','A','A','A','A','A','A','A','A','A','A','B','B'];
+  chart.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 60, right: 20, top: 10, bottom: 30 },
+    xAxis: { type: 'value', name: 'TOPSIS得分', max: 1 },
+    yAxis: { type: 'category', data: firms.reverse(), inverse: true,
+             axisLabel: { fontSize: 11 } },
+    series: [{
+      type: 'bar', data: scores.reverse().map((v,i) => ({
+        value: v,
+        itemStyle: { color: grades.reverse()[i] === 'A' ? COLORS.a :
+                     grades.reverse()[i] === 'B' ? COLORS.b : COLORS.orange,
+                     borderRadius: [0,4,4,0] }
+      })), barMaxWidth: 22
+    }]
+  });
+})();
+
+// ========== Chart 2: Default Rate by Grade ==========
+(function(){
+  const chart = initChart('chart-default-rate');
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 60, right: 20, top: 20, bottom: 30 },
+    legend: { data: ['企业数','违约率'], bottom: 0 },
+    xAxis: { type: 'category', data: ['A级','B级','C级','D级'] },
+    yAxis: [
+      { type: 'value', name: '企业数量' },
+      { type: 'value', name: '违约率', axisLabel: { formatter: '{value}%' }, max: 70 }
+    ],
+    series: [
+      { name: '企业数', type: 'bar', data: [30,31,37,25],
+        itemStyle: { color: '#bdc3c7', borderRadius: [4,4,0,0] }, barWidth: 36 },
+      { name: '违约率', type: 'line', yAxisIndex: 1,
+        data: [10.0, 12.9, 16.2, 56.0],
+        lineStyle: { color: COLORS.red, width: 3 },
+        itemStyle: { color: COLORS.red },
+        symbolSize: 10,
+        markLine: { silent: true, data: [{ yAxis: 10, label: { formatter: '10%基准' } }],
+          lineStyle: { type: 'dashed', color: '#999' } }
+      }
+    ]
+  });
+})();
+
+// ========== Chart 3: Pie - Attachment 1 ==========
+(function(){
+  const chart = initChart('chart-pie-1');
+  chart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c}家 ({d}%)' },
+    series: [{
+      type: 'pie', radius: ['50%','75%'],
+      data: [
+        { value: 28, name: 'A级', itemStyle: { color: COLORS.a } },
+        { value: 32, name: 'B级', itemStyle: { color: COLORS.b } },
+        { value: 38, name: 'C级', itemStyle: { color: COLORS.orange } },
+        { value: 25, name: 'D级', itemStyle: { color: COLORS.red } }
+      ],
+      label: { fontSize: 12 }, emphasis: { scale: true }
+    }]
+  });
+})();
+
+// ========== Chart 4: Pie - Attachment 2 ==========
+(function(){
+  const chart = initChart('chart-pie-2');
+  chart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c}家 ({d}%)' },
+    series: [{
+      type: 'pie', radius: ['50%','75%'],
+      data: [
+        { value: 75, name: 'A级', itemStyle: { color: COLORS.a } },
+        { value: 76, name: 'B级', itemStyle: { color: COLORS.b } },
+        { value: 90, name: 'C级', itemStyle: { color: COLORS.orange } },
+        { value: 61, name: 'D级', itemStyle: { color: COLORS.red } }
+      ],
+      label: { fontSize: 12 }
+    }]
+  });
+})();
+
+// ========== Chart 5: Weight Distribution ==========
+(function(){
+  const chart = initChart('chart-weights');
+  const labels = ['销项总金额','进项总金额','利润率','利润','销项客户数','进项供应商数',
+                  '交易网络广度','收入波动率','成本波动率','销项有效率','进项有效率',
+                  '销项作废率','进项作废率','收入环比增长率','综合活跃月数'];
+  const vals = [0.064,0.061,0.058,0.055,0.077,0.067,0.065,0.059,0.060,0.052,0.052,0.049,0.051,0.184,0.046];
+  chart.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 110, right: 30, top: 10, bottom: 20 },
+    xAxis: { type: 'value', name: '权重' },
+    yAxis: { type: 'category', data: labels.reverse(), inverse: true, axisLabel: { fontSize: 10 } },
+    series: [{
+      type: 'bar', data: vals.reverse().map(v => ({
+        value: v,
+        itemStyle: { color: v > 0.1 ? COLORS.gold : COLORS.teal, borderRadius: [0,3,3,0] }
+      })), barMaxWidth: 16
+    }]
+  });
+})();
+
+// ========== Chart 6: Rate-Churn Curve ==========
+(function(){
+  const chart = initChart('chart-rate-churn');
+  const rates = [];
+  for (let r = 4; r <= 15; r += 0.1) rates.push(r);
+  const churnA = rates.map(r => Math.max(0, Math.min(100, -76.41*(r/100)**2 + 21.98*(r/100) - 0.697)*100));
+  const churnB = rates.map(r => Math.max(0, Math.min(100, -67.93*(r/100)**2 + 20.21*(r/100) - 0.650)*100));
+  const churnC = rates.map(r => Math.max(0, Math.min(100, -63.94*(r/100)**2 + 19.57*(r/100) - 0.639)*100));
+  chart.setOption({
+    tooltip: { trigger: 'axis', formatter: p => `利率: ${p[0].axisValue}%<br/>` + p.map(s => `${s.marker}${s.seriesName}: ${s.value.toFixed(1)}%`).join('<br/>') },
+    legend: { data: ['A级','B级','C级'], bottom: 0 },
+    grid: { left: 50, right: 20, top: 10, bottom: 40 },
+    xAxis: { type: 'value', name: '贷款年利率(%)', min: 4, max: 15, axisLabel: { formatter: '{value}%' } },
+    yAxis: { type: 'value', name: '客户流失率(%)', axisLabel: { formatter: '{value}%' } },
+    series: [
+      { name: 'A级', type: 'line', data: rates.map((r,i) => [r, churnA[i]]), smooth: true,
+        lineStyle: { color: COLORS.a, width: 2.5 }, itemStyle: { color: COLORS.a }, showSymbol: false },
+      { name: 'B级', type: 'line', data: rates.map((r,i) => [r, churnB[i]]), smooth: true,
+        lineStyle: { color: COLORS.b, width: 2.5 }, itemStyle: { color: COLORS.b }, showSymbol: false },
+      { name: 'C级', type: 'line', data: rates.map((r,i) => [r, churnC[i]]), smooth: true,
+        lineStyle: { color: COLORS.orange, width: 2.5 }, itemStyle: { color: COLORS.orange }, showSymbol: false }
+    ]
+  });
+})();
+
+// ========== Chart 7: Loan Distribution (Problem 2) ==========
+(function(){
+  const chart = initChart('chart-loan-dist');
+  // Simulated loan distribution data
+  const bins = ['0-20','20-40','40-60','60-80','80-100'];
+  const counts = [38, 95, 52, 34, 22];
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 50, right: 20, top: 10, bottom: 30 },
+    xAxis: { type: 'category', data: bins, name: '贷款额度(万元)' },
+    yAxis: { type: 'value', name: '企业数量' },
+    series: [{
+      type: 'bar', data: counts.map((v,i) => ({
+        value: v,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0,0,0,1,
+            [{offset:0,color:COLORS.teal},{offset:1,color:'#14a3a8'}])
+        }
+      })), barWidth: 40,
+      markLine: { silent: true, data: [{ yAxis: 95, label: { formatter: '峰值: 20-40万' } }],
+        lineStyle: { type: 'dashed', color: '#999' } }
+    }]
+  });
+})();
+
+// ========== Chart 8: COVID Loan Comparison ==========
+(function(){
+  const chart = initChart('chart-covid-loan');
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['调整前','调整后'], bottom: 0 },
+    grid: { left: 60, right: 20, top: 20, bottom: 40 },
+    xAxis: { type: 'category', data: ['严重负面\n(3家)','中度负面\n(69家)','其他\n(187家)','正面/轻影响\n(43家)'],
+             axisLabel: { fontSize: 10 } },
+    yAxis: { type: 'value', name: '平均贷款额度(万元)' },
+    series: [
+      { name: '调整前', type: 'bar', data: [40.1, 35.7, 42.0, 30.7],
+        itemStyle: { color: '#bdc3c7', borderRadius: [4,4,0,0] }, barGap: '20%', barWidth: 28 },
+      { name: '调整后', type: 'bar', data: [22.4, 21.9, 38.7, 37.5],
+        itemStyle: { color: COLORS.teal, borderRadius: [4,4,0,0] }, barWidth: 28 }
+    ]
+  });
+})();
+
+// ========== Chart 9: Grade Flow ==========
+(function(){
+  const chart = initChart('chart-grade-flow');
+  chart.setOption({
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'sankey', layout: 'none', emphasis: { focus: 'adjacency' },
+      nodeAlign: 'left',
+      data: [
+        { name: 'A(前)' }, { name: 'B(前)' }, { name: 'C(前)' }, { name: 'D(前)' },
+        { name: 'A(后)' }, { name: 'B(后)' }, { name: 'C(后)' }, { name: 'D(后)' }
+      ],
+      links: [
+        { source: 'A(前)', target: 'A(后)', value: 52 },
+        { source: 'A(前)', target: 'B(后)', value: 18 },
+        { source: 'A(前)', target: 'C(后)', value: 5 },
+        { source: 'B(前)', target: 'A(后)', value: 23 },
+        { source: 'B(前)', target: 'B(后)', value: 42 },
+        { source: 'B(前)', target: 'C(后)', value: 11 },
+        { source: 'C(前)', target: 'B(后)', value: 16 },
+        { source: 'C(前)', target: 'C(后)', value: 58 },
+        { source: 'C(前)', target: 'D(后)', value: 16 },
+        { source: 'D(前)', target: 'C(后)', value: 15 },
+        { source: 'D(前)', target: 'D(后)', value: 46 }
+      ],
+      lineStyle: { color: 'gradient', curveness: 0.5 }
+    }]
+  });
+})();
+
+// ========== Chart 10: Sensitivity ==========
+(function(){
+  const chart = initChart('chart-sensitivity');
+  const x = Array.from({length:100}, (_,i) => i+1);
+  const spearman = x.map(() => 0.96 + (Math.random()-0.5)*0.02);
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 60, right: 20, top: 20, bottom: 30 },
+    xAxis: { type: 'category', data: x.map(v => v%10===0?v:''), name: '扰动试验编号' },
+    yAxis: { type: 'value', name: 'Spearman相关系数', min: 0.92, max: 1.0 },
+    series: [{
+      type: 'line', data: spearman, showSymbol: false,
+      lineStyle: { color: COLORS.teal, width: 1.5 },
+      areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,
+        [{offset:0,color:'rgba(13,115,119,0.15)'},{offset:1,color:'rgba(13,115,119,0.02)'}]) },
+      markLine: { silent: true, symbol: 'none',
+        data: [
+          { yAxis: 0.85, label: { formatter: '稳健性阈值 0.85' }, lineStyle: { type:'dashed', color: COLORS.orange } },
+          { yAxis: 0.965, label: { formatter: '均值 0.965' }, lineStyle: { type:'dashed', color: COLORS.green } }
+        ]
+      }
+    }]
+  });
+})();
+
+// ========== Chart 11: Cross-tab Heatmap ==========
+(function(){
+  const chart = initChart('chart-crosstab');
+  const data = [[10,11,6,0],[9,9,17,3],[8,8,9,9],[1,4,6,13]];
+  chart.setOption({
+    tooltip: { trigger: 'item' },
+    grid: { left: 80, right: 50, top: 20, bottom: 40 },
+    xAxis: { type: 'category', data: ['模型A','模型B','模型C','模型D'], position: 'top' },
+    yAxis: { type: 'category', data: ['银行A','银行B','银行C','银行D'], inverse: true },
+    visualMap: { min: 0, max: 17, calculable: true, orient: 'vertical', right: 0, top: 30,
+      inRange: { color: ['#f7f5f2','#e8f5e9','#81c784','#2e7d32'] }, show: false },
+    series: [{
+      type: 'heatmap', data: data.flatMap((row,i) => row.map((v,j) => [j,i,v])),
+      label: { show: true, fontSize: 14, fontWeight: 600 },
+      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } }
+    }]
+  });
+})();
+</script>
+
+</body>
+</html>
