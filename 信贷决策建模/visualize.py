@@ -14,7 +14,7 @@ import matplotlib.ticker as mticker
 plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'charts')
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'output', 'charts')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 

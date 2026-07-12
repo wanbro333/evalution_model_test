@@ -352,15 +352,16 @@ def risk_model_pipeline(df1, df2):
 
 if __name__ == '__main__':
     base = os.path.dirname(__file__)
-    f1_path = os.path.join(base, 'features_附件1.csv')
-    f2_path = os.path.join(base, 'features_附件2.csv')
+    out = os.path.join(base, 'output')
+    f1_path = os.path.join(out, 'features_附件1.csv')
+    f2_path = os.path.join(out, 'features_附件2.csv')
 
     if os.path.exists(f1_path) and os.path.exists(f2_path):
         df1 = pd.read_csv(f1_path, index_col='企业代号')
         df2 = pd.read_csv(f2_path, index_col='企业代号')
         s1, s2, w = risk_model_pipeline(df1, df2)
-        s1.to_csv(os.path.join(base, 'scores_附件1.csv'), encoding='utf-8-sig', index=False)
-        s2.to_csv(os.path.join(base, 'scores_附件2.csv'), encoding='utf-8-sig', index=False)
+        s1.to_csv(os.path.join(out, 'scores_附件1.csv'), encoding='utf-8-sig', index=False)
+        s2.to_csv(os.path.join(out, 'scores_附件2.csv'), encoding='utf-8-sig', index=False)
         safe_print("\n[OK] 评分结果已保存")
     else:
         safe_print("请先运行 feature_engineer.py 生成特征数据")

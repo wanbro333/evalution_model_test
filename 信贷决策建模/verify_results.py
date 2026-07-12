@@ -235,14 +235,15 @@ def main():
     safe_print("=" * 70)
 
     # 加载结果
-    s1 = pd.read_csv(os.path.join(BASE, 'scores_附件1.csv'))
-    s2 = pd.read_csv(os.path.join(BASE, 'scores_附件2.csv'))
-    st1 = pd.read_csv(os.path.join(BASE, 'strategy_附件1.csv'))
-    st2 = pd.read_csv(os.path.join(BASE, 'strategy_附件2.csv'))
-    st2_adj = pd.read_csv(os.path.join(BASE, 'strategy_附件2_疫情调整.csv'))
+    OUT = os.path.join(BASE, 'output')
+    s1 = pd.read_csv(os.path.join(OUT, 'scores_附件1.csv'))
+    s2 = pd.read_csv(os.path.join(OUT, 'scores_附件2.csv'))
+    st1 = pd.read_csv(os.path.join(OUT, 'strategy_附件1.csv'))
+    st2 = pd.read_csv(os.path.join(OUT, 'strategy_附件2.csv'))
+    st2_adj = pd.read_csv(os.path.join(OUT, 'strategy_附件2_疫情调整.csv'))
 
     # 加载特征
-    f1 = pd.read_csv(os.path.join(BASE, 'features_附件1.csv'), index_col='企业代号')
+    f1 = pd.read_csv(os.path.join(OUT, 'features_附件1.csv'), index_col='企业代号')
 
     # 执行7项核查
     check1_budget_utilization(st1, st2)

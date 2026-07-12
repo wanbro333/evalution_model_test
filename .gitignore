@@ -1,9 +1,30 @@
+# Python
 __pycache__/
+*.pyc
+
+# Database (large)
 credit_data.db
-*.xlsx
-!信贷决策建模/*.xlsx
-*.docx
-*.pdf
-tmp/
+*.db
+
+# LaTeX auxiliary
+paper.aux
+paper.log
+paper.out
+paper.toc
+paper.synctex.gz
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# Original data (large, proprietary)
+附件*.xlsx
+
+# Temp files
 *.tmp
+tmp/
 .DS_Store
+
+# Build
+build/

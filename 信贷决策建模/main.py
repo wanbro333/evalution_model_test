@@ -92,15 +92,16 @@ def main():
 
     # 保存特征
     base_dir = os.path.dirname(__file__)
-    df_features_1.to_csv(os.path.join(base_dir, 'features_附件1.csv'), encoding='utf-8-sig')
-    df_features_2.to_csv(os.path.join(base_dir, 'features_附件2.csv'), encoding='utf-8-sig')
+    out_dir = os.path.join(base_dir, 'output')
+    df_features_1.to_csv(os.path.join(out_dir, 'features_附件1.csv'), encoding='utf-8-sig')
+    df_features_2.to_csv(os.path.join(out_dir, 'features_附件2.csv'), encoding='utf-8-sig')
 
     # ========== Phase 3: 风险评估 ==========
     df_scores_1, df_scores_2, w_dict = risk_model_pipeline(df_features_1, df_features_2)
 
     # 保存评分
-    df_scores_1.to_csv(os.path.join(base_dir, 'scores_附件1.csv'), encoding='utf-8-sig', index=False)
-    df_scores_2.to_csv(os.path.join(base_dir, 'scores_附件2.csv'), encoding='utf-8-sig', index=False)
+    df_scores_1.to_csv(os.path.join(out_dir, 'scores_附件1.csv'), encoding='utf-8-sig', index=False)
+    df_scores_2.to_csv(os.path.join(out_dir, 'scores_附件2.csv'), encoding='utf-8-sig', index=False)
 
     # ========== Phase 4: 信贷策略 ==========
     strategy_1, strategy_2, strategy_2_adj, get_churn, coeffs = credit_strategy_pipeline(
@@ -108,9 +109,9 @@ def main():
     )
 
     # 保存策略
-    strategy_1.to_csv(os.path.join(base_dir, 'strategy_附件1.csv'), encoding='utf-8-sig', index=False)
-    strategy_2.to_csv(os.path.join(base_dir, 'strategy_附件2.csv'), encoding='utf-8-sig', index=False)
-    strategy_2_adj.to_csv(os.path.join(base_dir, 'strategy_附件2_疫情调整.csv'),
+    strategy_1.to_csv(os.path.join(out_dir, 'strategy_附件1.csv'), encoding='utf-8-sig', index=False)
+    strategy_2.to_csv(os.path.join(out_dir, 'strategy_附件2.csv'), encoding='utf-8-sig', index=False)
+    strategy_2_adj.to_csv(os.path.join(out_dir, 'strategy_附件2_疫情调整.csv'),
                           encoding='utf-8-sig', index=False)
 
     # ========== Phase 5: 突发因素（已在credit_strategy_pipeline中完成）==========
@@ -125,7 +126,7 @@ def main():
     )
 
     # ========== 导出Excel ==========
-    output_excel = os.path.join(base_dir, '信贷决策建模结果.xlsx')
+    output_excel = os.path.join(out_dir, '信贷决策建模结果.xlsx')
     export_to_excel(df_scores_1, df_scores_2, strategy_1, strategy_2, strategy_2_adj, output_excel)
 
     # ========== 汇总报告 ==========

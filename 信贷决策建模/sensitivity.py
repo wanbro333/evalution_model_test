@@ -146,8 +146,9 @@ def run_sensitivity(df1_features, df_scores_1, w_dict):
 
 if __name__ == '__main__':
     base = os.path.dirname(__file__)
-    df1 = pd.read_csv(os.path.join(base, 'features_附件1.csv'), index_col='企业代号')
-    s1 = pd.read_csv(os.path.join(base, 'scores_附件1.csv'))
+    out = os.path.join(base, 'output')
+    df1 = pd.read_csv(os.path.join(out, 'features_附件1.csv'), index_col='企业代号')
+    s1 = pd.read_csv(os.path.join(out, 'scores_附件1.csv'))
     # 需要w_dict, 但这里仅测试
     # 生成简单权重
     w_dict = {}

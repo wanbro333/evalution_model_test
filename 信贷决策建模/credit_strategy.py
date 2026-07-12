@@ -408,15 +408,16 @@ def credit_strategy_pipeline(df_scores_1, df_scores_2):
 
 if __name__ == '__main__':
     base = os.path.dirname(__file__)
+    out = os.path.join(base, 'output')
 
     # 加载评分数据
-    s1 = pd.read_csv(os.path.join(base, 'scores_附件1.csv'))
-    s2 = pd.read_csv(os.path.join(base, 'scores_附件2.csv'))
+    s1 = pd.read_csv(os.path.join(out, 'scores_附件1.csv'))
+    s2 = pd.read_csv(os.path.join(out, 'scores_附件2.csv'))
 
     st1, st2, st2_adj, gc, cf = credit_strategy_pipeline(s1, s2)
 
     # 保存结果
-    st1.to_csv(os.path.join(base, 'strategy_附件1.csv'), encoding='utf-8-sig', index=False)
-    st2.to_csv(os.path.join(base, 'strategy_附件2.csv'), encoding='utf-8-sig', index=False)
-    st2_adj.to_csv(os.path.join(base, 'strategy_附件2_疫情调整.csv'), encoding='utf-8-sig', index=False)
+    st1.to_csv(os.path.join(out, 'strategy_附件1.csv'), encoding='utf-8-sig', index=False)
+    st2.to_csv(os.path.join(out, 'strategy_附件2.csv'), encoding='utf-8-sig', index=False)
+    st2_adj.to_csv(os.path.join(out, 'strategy_附件2_疫情调整.csv'), encoding='utf-8-sig', index=False)
     safe_print("\n[OK] 信贷策略结果已保存")

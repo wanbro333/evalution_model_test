@@ -195,7 +195,8 @@ if __name__ == '__main__':
     conn = load_all_data()
     df1, df2 = build_all_features(conn)
     # 保存特征供后续使用
-    df1.to_csv(os.path.join(os.path.dirname(__file__), 'features_附件1.csv'), encoding='utf-8-sig')
-    df2.to_csv(os.path.join(os.path.dirname(__file__), 'features_附件2.csv'), encoding='utf-8-sig')
+    out = os.path.join(os.path.dirname(__file__), 'output')
+    df1.to_csv(os.path.join(out, 'features_附件1.csv'), encoding='utf-8-sig')
+    df2.to_csv(os.path.join(out, 'features_附件2.csv'), encoding='utf-8-sig')
     print("\n特征数据已保存到 CSV")
     conn.close()
