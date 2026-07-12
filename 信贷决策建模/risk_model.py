@@ -71,11 +71,26 @@ def preprocess_features(df, config=FEATURE_CONFIG):
             else:
                 X[col] = np.log1p(X[col])
 
+    # 对作废率做非线性放大：高作废率应受到指数级惩罚
+    for col in ['销项作废率', '进项作废率']:
+        if col in X.columns:
+            # 使用指数变换: exp(作废率*3)-1, 使高作废率(>30%)受到强烈惩罚
+            X[col] = np.expm1(np.clip(X[col], 0, 1) * 3)
+
     # Winsorize (1%-99%)
     for col in X.columns:
         q01, q99 = X[col].quantile(0.01), X[col].quantile(0.99)
         if q01 < q99:
             X[col] = X[col].clip(q01, q99)
+
+    # 特殊处理：收入环比增长率 限制在[-1, 2] (即-100%到+200%)
+    # 超过200%的增长率通常是微小企业或数据异常，不具有参考价值
+    if '收入环比增长率' in X.columns:
+        X['收入环比增长率'] = X['收入环比增长率'].clip(-1, 2)
+
+    # 特殊处理：利润率限制在[-0.5, 0.5], 超出范围的极端值影响信用评估
+    if '利润率' in X.columns:
+        X['利润率'] = X['利润率'].clip(-0.5, 0.5)
 
     return X, available_cols
 
@@ -151,7 +166,8 @@ def evaluate_credit_risk(df_features, feature_config=FEATURE_CONFIG, alpha=0.5):
     w_ahp = build_ahp_weight_vector(available_cols)
     safe_print(f"  AHP权重: {np.round(w_ahp, 3)}")
 
-    # 6. 组合赋权
+    # 6. 组合赋权（AHP占比更高以减少噪声指标的主导）
+    alpha = 0.6  # AHP权重60% (原来50%), 降低熵权法的噪音影响
     w_combined = alpha * w_ahp + (1 - alpha) * w_entropy
     w_combined = w_combined / w_combined.sum()
     safe_print(f"  组合权重(alpha={alpha}): {np.round(w_combined, 3)}")

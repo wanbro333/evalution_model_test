@@ -118,33 +118,40 @@ def allocate_credit(df_scores, total_budget=10000, get_churn_rate=None):
     loan_min, loan_max = 10, 100
     df_eligible['贷款额度_万元'] = df_eligible['初始额度'].clip(loan_min, loan_max)
 
-    # 5. 调整总额到约束内
+    # 5. 迭代调整总额到约束内
     actual_total = df_eligible['贷款额度_万元'].sum()
-    if actual_total > total_budget:
-        # 超出预算，按比例缩减(不低于10万)
-        scale = total_budget / actual_total
-        df_eligible['贷款额度_万元'] = np.maximum(
-            loan_min,
-            df_eligible['贷款额度_万元'] * scale
-        )
-        # 迭代调整
-        for _ in range(10):
-            actual_total = df_eligible['贷款额度_万元'].sum()
-            if abs(actual_total - total_budget) / total_budget < 0.01:
-                break
-            if actual_total > total_budget:
-                excess = actual_total - total_budget
-                # 从额度最高的企业中削减
-                adjustable = df_eligible['贷款额度_万元'] > loan_min
-                if adjustable.any():
-                    total_adjustable = df_eligible.loc[adjustable, '贷款额度_万元'].sum() - \
-                                       adjustable.sum() * loan_min
-                    if total_adjustable > 0:
-                        reduction_factor = 1 - min(1, excess / total_adjustable)
-                        df_eligible.loc[adjustable, '贷款额度_万元'] = np.maximum(
-                            loan_min,
-                            df_eligible.loc[adjustable, '贷款额度_万元'] * reduction_factor
-                        )
+
+    for _ in range(20):
+        actual_total = df_eligible['贷款额度_万元'].sum()
+        gap = total_budget - actual_total  # 正=预算有剩余, 负=超出
+
+        if abs(gap) / total_budget < 0.001:  # 收敛到0.1%以内
+            break
+
+        if gap > 0:
+            # 预算有剩余 → 按得分比例往上加，但不超过100万
+            adjustable = df_eligible['贷款额度_万元'] < loan_max
+            if adjustable.any():
+                # 按得分分配剩余预算
+                adj_scores = df_eligible.loc[adjustable, 'TOPSIS得分']
+                total_adj_score = adj_scores.sum()
+                if total_adj_score > 0:
+                    additions = (adj_scores / total_adj_score) * gap
+                    df_eligible.loc[adjustable, '贷款额度_万元'] += additions.values
+                df_eligible['贷款额度_万元'] = df_eligible['贷款额度_万元'].clip(loan_min, loan_max)
+        else:
+            # 超出预算 → 从可削减的企业中按比例缩减
+            excess = -gap
+            adjustable = df_eligible['贷款额度_万元'] > loan_min
+            if adjustable.any():
+                total_adjustable = df_eligible.loc[adjustable, '贷款额度_万元'].sum() - \
+                                   adjustable.sum() * loan_min
+                if total_adjustable > 0:
+                    reduction = 1 - min(1, excess / total_adjustable)
+                    df_eligible.loc[adjustable, '贷款额度_万元'] = np.maximum(
+                        loan_min,
+                        (df_eligible.loc[adjustable, '贷款额度_万元'] - loan_min) * reduction + loan_min
+                    )
 
     # 6. 利率分配
     base_rates = {'A': 0.04, 'B': 0.065, 'C': 0.10}
@@ -299,28 +306,58 @@ def apply_emergency_adjustment(df_scores, df_strategy, get_churn_rate=None):
     df.loc[df.index < n * 0.50, '调整后等级'] = 'B'
     df.loc[df.index < n * 0.25, '调整后等级'] = 'A'
 
-    # 5. 重新计算利率
-    base_rates = {'A': 0.04, 'B': 0.065, 'C': 0.10}
-    df['调整后利率'] = df['调整后等级'].map(base_rates).fillna(0.10)
-    # 加上行业影响的利率调整
+    # 5. 重新计算利率：基于原始等级+行业冲击，而非重新分级
+    # 原则: 严重负面行业加息, 正面行业降息; 保持相对公平
+    base_rates = {'A': 0.04, 'B': 0.065, 'C': 0.10, 'D': 0.15}
     rate_adj_map = {'严重负面': 0.02, '中度负面': 0.01, '其他': 0.0, '正面/轻影响': -0.01}
+
+    # 基于原始等级的基准利率
+    df['原始基准利率'] = df['风险等级'].map(base_rates).fillna(0.10)
     df['行业利率调整'] = df['行业类别'].map(rate_adj_map).fillna(0.0)
-    df['调整后利率'] = df['调整后利率'] + df['行业利率调整']
+
+    # 调整后等级基准利率（如果等级变化了）
+    df['调整后基准利率'] = df['调整后等级'].map(base_rates).fillna(0.10)
+
+    # 利率 = max(原始基准, 调整后基准) + 行业调整
+    # 这样: 等级提升了会降息, 等级下降了不会因此大幅加息(但行业调整会)
+    df['调整后利率'] = np.where(
+        df['调整后基准利率'] < df['原始基准利率'],  # 等级提升(利率应下降)
+        df['调整后基准利率'] + df['行业利率调整'],   # 使用更好的等级
+        df['原始基准利率'] + df['行业利率调整']      # 保持原等级+行业调整
+    )
     df['调整后利率'] = df['调整后利率'].clip(0.04, 0.15)
 
     # 6. 调整后的额度分配
     eligible = df[df['调整后等级'] != 'D']
-    total_budget = 10000  # 问题3也是1亿元
+    total_budget = 10000
+    loan_min, loan_max = 10, 100
 
     adj_scores = eligible['调整后得分'].values
     total_adj_score = adj_scores.sum()
     if total_adj_score > 0:
-        eligible_copy = eligible.copy()
-        eligible_copy['调整后额度'] = (adj_scores / total_adj_score) * total_budget
-        eligible_copy['调整后额度'] = eligible_copy['调整后额度'].clip(10, 100)
-
         df['调整后额度'] = 0.0
-        df.loc[eligible.index, '调整后额度'] = eligible_copy['调整后额度'].values
+        eligible_initial = (adj_scores / total_adj_score) * total_budget
+        eligible_initial = np.clip(eligible_initial, loan_min, loan_max)
+        df.loc[eligible.index, '调整后额度'] = eligible_initial
+
+        # 迭代再分配剩余/超出预算
+        for _ in range(30):
+            curr_total = df.loc[eligible.index, '调整后额度'].sum()
+            gap = total_budget - curr_total
+            if abs(gap) / total_budget < 0.0005:
+                break
+            if gap > 0:
+                # 有剩余: 给未达上限的企业加
+                under_cap = eligible.index[(df.loc[eligible.index, '调整后额度'] < loan_max)]
+                if len(under_cap) > 0:
+                    df.loc[under_cap, '调整后额度'] += gap / len(under_cap)
+                df['调整后额度'] = df['调整后额度'].clip(lower=0, upper=loan_max)
+            else:
+                # 超出: 从达上限的企业减
+                over_min = eligible.index[(df.loc[eligible.index, '调整后额度'] > loan_min)]
+                if len(over_min) > 0:
+                    df.loc[over_min, '调整后额度'] += gap / len(over_min)
+                df['调整后额度'] = df['调整后额度'].clip(lower=loan_min, upper=loan_max)
     else:
         df['调整后额度'] = df['贷款额度_万元']
 
