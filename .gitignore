@@ -1,0 +1,9 @@
+__pycache__/
+credit_data.db
+*.xlsx
+!信贷决策建模/*.xlsx
+*.docx
+*.pdf
+tmp/
+*.tmp
+.DS_Store
