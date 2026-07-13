@@ -1,423 +1,249 @@
-"""
-信贷策略与突发因素调整模块
-内容：
-  1. 利率-流失率关系建模（附件3）
-  2. 信贷额度与利率分配策略
-  3. 突发因素（新冠疫情）影响调整
-"""
-import sys, os
-sys.path.insert(0, os.path.dirname(__file__))
+"""单调流失率、期望收益定价、MILP额度分配与疫情赔率调整。"""
+import os
+import re
+import sqlite3
+import sys
+
 import numpy as np
 import pandas as pd
-import sqlite3
+from scipy.optimize import Bounds, LinearConstraint, milp
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'credit_data.db')
-
-
-def safe_print(*args, **kwargs):
-    try:
-        print(*args, **kwargs)
-    except UnicodeEncodeError:
-        text = ' '.join(str(a) for a in args)
-        safe_text = text.encode('ascii', errors='replace').decode('ascii')
-        print(safe_text, **kwargs)
-
-
-# ========== 1. 利率-流失率建模 ==========
-def fit_rate_churn_model():
-    """
-    从附件3拟合利率与客户流失率的关系
-    对A/B/C三个信誉等级分别拟合多项式
-    返回: 拟合函数字典
-    """
-    safe_print("\n" + "=" * 60)
-    safe_print("阶段4.1: 利率-流失率关系建模")
-    safe_print("=" * 60)
-
-    conn = sqlite3.connect(DB_PATH)
-    df = pd.read_sql("SELECT * FROM rate_churn", conn)
-    conn.close()
-
-    rates = df['贷款年利率'].values
-    churn_A = df['客户流失率_A'].values
-    churn_B = df['客户流失率_B'].values
-    churn_C = df['客户流失率_C'].values
-
-    safe_print(f"  数据点: {len(rates)}个, 利率范围 [{rates.min():.2%}, {rates.max():.2%}]")
-
-    # 多项式拟合 (degree=2)
-    coeffs = {}
-    for grade, churn in [('A', churn_A), ('B', churn_B), ('C', churn_C)]:
-        # 二次多项式: y = a*x^2 + b*x + c
-        coeff = np.polyfit(rates, churn, 2)
-        coeffs[grade] = coeff
-
-        # 计算R^2
-        y_pred = np.polyval(coeff, rates)
-        ss_res = np.sum((churn - y_pred) ** 2)
-        ss_tot = np.sum((churn - np.mean(churn)) ** 2)
-        r2 = 1 - ss_res / ss_tot
-
-        safe_print(f"  等级{grade}: loss = {coeff[0]:.2f}*r^2 + {coeff[1]:.2f}*r + {coeff[2]:.4f}, R^2={r2:.4f}")
-
-        # 检查是否满足R^2>0.9
-        if r2 < 0.9:
-            safe_print(f"  [WARNING] 等级{grade} R^2={r2:.4f} < 0.9, 考虑使用更高阶拟合")
-
-    def get_churn_rate(rate, grade):
-        """根据利率和信誉等级预测流失率"""
-        if grade not in coeffs:
-            return 0.0
-        churn = np.polyval(coeffs[grade], rate)
-        return max(0.0, min(1.0, churn))  # 限制在[0,1]
-
-    safe_print("\n  示例: 利率=8%时各等级流失率:")
-    for g in ['A', 'B', 'C']:
-        safe_print(f"    等级{g}: {get_churn_rate(0.08, g):.4f}")
-
-    return get_churn_rate, coeffs
+sys.path.insert(0, os.path.dirname(__file__))
+from config import (
+    BUDGET_PROBLEM_1,
+    BUDGET_PROBLEM_2,
+    DB_PATH,
+    FUNDING_COST,
+    LGD,
+    LOAN_MAX,
+    LOAN_MIN,
+    SHOCK_FACTORS,
+)
+from risk_model import grade_from_pd
 
 
-# ========== 2. 信贷策略制定 ==========
-def allocate_credit(df_scores, total_budget=10000, get_churn_rate=None):
-    """
-    根据风险评分分配信贷额度和利率
-    原则:
-      - D级不放贷
-      - 额度按TOPSIS得分比例分配，限制在10-100万
-      - 利率按风险等级阶梯: A=4-6%, B=6-9%, C=9-12%, D=不贷
-      - 考虑客户流失率
+def pava(values):
+    """最小二乘单调递增回归（pool-adjacent-violators）。"""
+    levels, weights, counts = [], [], []
+    for value in np.asarray(values, dtype=float):
+        levels.append(float(value))
+        weights.append(1.0)
+        counts.append(1)
+        while len(levels) >= 2 and levels[-2] > levels[-1]:
+            weight = weights[-2] + weights[-1]
+            level = (levels[-2] * weights[-2] + levels[-1] * weights[-1]) / weight
+            count = counts[-2] + counts[-1]
+            levels[-2:] = [level]
+            weights[-2:] = [weight]
+            counts[-2:] = [count]
+    return np.concatenate([np.full(count, level) for level, count in zip(levels, counts)])
 
-    参数:
-      df_scores: 含TOPSIS得分和风险等级的DataFrame
-      total_budget: 年度信贷总额(万元), 默认1亿=10000万
-      get_churn_rate: 流失率计算函数
-    """
-    safe_print("\n" + "=" * 60)
-    safe_print("阶段4.2: 信贷策略制定")
-    safe_print(f"  年度信贷总额: {total_budget}万元")
-    safe_print("=" * 60)
 
-    df = df_scores.copy()
-
-    # 1. 排除D级或得分极低的企业
-    df_eligible = df[df['风险等级'] != 'D'].copy()
-    n_eligible = len(df_eligible)
-    safe_print(f"  放贷企业数: {n_eligible}/{len(df)} ({n_eligible/len(df)*100:.1f}%)")
-
-    # 2. 按TOPSIS得分分配额度权重
-    scores = df_eligible['TOPSIS得分'].values
-    total_score = scores.sum()
-    if total_score == 0:
-        total_score = 1e-12
-
-    # 3. 基于得分比例计算初始额度
-    df_eligible['初始额度'] = (scores / total_score) * total_budget
-
-    # 4. 限制在10-100万范围
-    loan_min, loan_max = 10, 100
-    df_eligible['贷款额度_万元'] = df_eligible['初始额度'].clip(loan_min, loan_max)
-
-    # 5. 迭代调整总额到约束内
-    actual_total = df_eligible['贷款额度_万元'].sum()
-
-    for _ in range(20):
-        actual_total = df_eligible['贷款额度_万元'].sum()
-        gap = total_budget - actual_total  # 正=预算有剩余, 负=超出
-
-        if abs(gap) / total_budget < 0.001:  # 收敛到0.1%以内
-            break
-
-        if gap > 0:
-            # 预算有剩余 → 按得分比例往上加，但不超过100万
-            adjustable = df_eligible['贷款额度_万元'] < loan_max
-            if adjustable.any():
-                # 按得分分配剩余预算
-                adj_scores = df_eligible.loc[adjustable, 'TOPSIS得分']
-                total_adj_score = adj_scores.sum()
-                if total_adj_score > 0:
-                    additions = (adj_scores / total_adj_score) * gap
-                    df_eligible.loc[adjustable, '贷款额度_万元'] += additions.values
-                df_eligible['贷款额度_万元'] = df_eligible['贷款额度_万元'].clip(loan_min, loan_max)
-        else:
-            # 超出预算 → 从可削减的企业中按比例缩减
-            excess = -gap
-            adjustable = df_eligible['贷款额度_万元'] > loan_min
-            if adjustable.any():
-                total_adjustable = df_eligible.loc[adjustable, '贷款额度_万元'].sum() - \
-                                   adjustable.sum() * loan_min
-                if total_adjustable > 0:
-                    reduction = 1 - min(1, excess / total_adjustable)
-                    df_eligible.loc[adjustable, '贷款额度_万元'] = np.maximum(
-                        loan_min,
-                        (df_eligible.loc[adjustable, '贷款额度_万元'] - loan_min) * reduction + loan_min
-                    )
-
-    # 6. 利率分配
-    base_rates = {'A': 0.04, 'B': 0.065, 'C': 0.10}
-    df_eligible['贷款年利率'] = df_eligible['风险等级'].map(base_rates).fillna(0.10)
-
-    # 7. 根据得分微调利率(得分高 = 利率优惠)
-    # 在基准利率上下浮动±1%
-    score_min, score_max = scores.min(), scores.max()
-    if score_max > score_min:
-        # 标准化得分到[0, 1]
-        score_norm = (scores - score_min) / (score_max - score_min)
-        # 利率调整: 得分高的减利率, 得分低的加利率 (基准利率 ± 0.01)
-        rate_adjust = (0.5 - score_norm) * 0.02  # 范围[-1%, +1%]
-        df_eligible['贷款年利率'] = df_eligible['贷款年利率'] + rate_adjust
-        df_eligible['贷款年利率'] = df_eligible['贷款年利率'].clip(0.04, 0.15)
-
-    # 8. 客户流失率估计
-    if get_churn_rate:
-        churn_rates = []
-        for _, row in df_eligible.iterrows():
-            churn = get_churn_rate(row['贷款年利率'], row['风险等级'])
-            churn_rates.append(churn)
-        df_eligible['预计流失率'] = churn_rates
-
-    # 9. D级企业不放贷
-    df_d = df[df['风险等级'] == 'D'].copy()
-    df_d['贷款额度_万元'] = 0
-    df_d['贷款年利率'] = 0
-    if get_churn_rate:
-        df_d['预计流失率'] = 0
-
-    # 合并结果
-    df_result = pd.concat([df_eligible, df_d], ignore_index=True)
-
-    # 统计
-    safe_print(f"\n  额度统计:")
-    safe_print(f"    总额度: {df_result['贷款额度_万元'].sum():.0f}万元 (预算{total_budget}万)")
-    safe_print(f"    平均额度: {df_eligible['贷款额度_万元'].mean():.1f}万元")
-    safe_print(f"    最小/最大额度: {loan_min}/{loan_max}万元")
-
-    safe_print(f"\n  利率统计:")
+def fit_rate_churn_model(db_path=DB_PATH):
+    connection = sqlite3.connect(db_path)
+    df = pd.read_sql('SELECT * FROM rate_churn ORDER BY 贷款年利率', connection)
+    connection.close()
+    rates = df['贷款年利率'].to_numpy(float)
+    order = np.argsort(rates)
+    rates = rates[order]
+    model = {'rates': rates.tolist(), 'curves': {}}
+    diagnostics = {}
     for grade in ['A', 'B', 'C']:
-        gmask = df_result['风险等级'] == grade
-        if gmask.any():
-            rates_g = df_result.loc[gmask, '贷款年利率']
-            safe_print(f"    等级{grade}: 利率{rates_g.min():.2%}~{rates_g.max():.2%}, 均值{rates_g.mean():.2%}")
-
-    # 预期收益
-    expected_revenue = (df_result['贷款额度_万元'] * df_result['贷款年利率']).sum()
-    safe_print(f"\n  预期利息收入: {expected_revenue:.0f}万元/年")
-
-    if '预计流失率' in df_result.columns:
-        avg_churn = df_eligible['预计流失率'].mean()
-        safe_print(f"  平均预计流失率: {avg_churn:.2%}")
-
-    return df_result
-
-
-# ========== 3. 突发因素调整 ==========
-def classify_industry(name):
-    """
-    从企业名称推断行业类别
-    基于关键词匹配
-    """
-    if not isinstance(name, str):
-        return '其他'
-
-    name = name.replace('***', '').replace('*', '').strip()
-
-    # 严重受疫情影响(负面)
-    severe_negative = ['旅游', '旅行', '酒店', '宾馆', '住宿', '餐饮', '餐厅',
-                       '饭店', '影院', '电影', '娱乐城', 'KTV', '演出', '会展',
-                       '航空', '客运', '旅行社']
-    for kw in severe_negative:
-        if kw in name:
-            return '严重负面'
-
-    # 中度受疫情影响
-    moderate_negative = ['建筑', '建材', '装修', '装饰', '房地产', '房产',
-                         '批发', '零售', '商贸', '商店', '超市', '商场',
-                         '制造', '加工', '生产', '工厂', '纺织', '服装',
-                         '运输', '物流', '货运', '快递',
-                         '教育', '培训', '学校',
-                         '汽车', '汽配', '车行']
-    for kw in moderate_negative:
-        if kw in name:
-            return '中度负面'
-
-    # 轻度影响/正面
-    positive_kw = ['医疗', '医药', '药品', '生物', '卫生', '健康',
-                   '科技', '技术', '信息', '软件', '网络', '数据',
-                   '电子', '电商', '在线', '互联网', '数字',
-                   '通信', '通讯', '计算机']
-    for kw in positive_kw:
-        if kw in name:
-            return '正面/轻影响'
-
-    # 默认：中性
-    return '其他'
+        raw = df[f'客户流失率_{grade}'].to_numpy(float)[order]
+        fitted = np.clip(pava(raw), 0, 1)
+        model['curves'][grade] = fitted.tolist()
+        diagnostics[grade] = {
+            'raw_monotonic_violations': int(np.sum(np.diff(raw) < 0)),
+            'rmse': float(np.sqrt(np.mean((raw - fitted) ** 2))),
+            'churn_at_4pct': float(np.interp(0.04, rates, fitted)),
+            'churn_at_15pct': float(np.interp(0.15, rates, fitted)),
+        }
+    print('\n阶段4.1：单调利率—流失率模型')
+    for grade, info in diagnostics.items():
+        print(f"  {grade}级: 原始下降点{info['raw_monotonic_violations']}个, 单调拟合RMSE={info['rmse']:.4f}")
+    return model, diagnostics
 
 
-def apply_emergency_adjustment(df_scores, df_strategy, get_churn_rate=None):
-    """
-    问题3: 考虑突发因素（新冠疫情）调整信贷策略
+def churn_rate(rate, grade, model):
+    if grade not in model['curves']:
+        return 1.0
+    value = np.interp(float(rate), np.asarray(model['rates']), np.asarray(model['curves'][grade]))
+    return float(np.clip(value, 0, 1))
 
-    调整原则:
-      - 严重负面行业: 风险得分下调20%, 利率上浮2%, 额度削减
-      - 中度负面行业: 风险得分下调10%, 利率上浮1%
-      - 正面行业: 风险得分上调5%, 利率优惠1%
-    """
-    safe_print("\n" + "=" * 60)
-    safe_print("阶段5: 突发因素（新冠疫情）信贷调整")
-    safe_print("=" * 60)
 
-    df = df_strategy.copy()
+def choose_rate(pd_value, grade, model, lgd=LGD, funding_cost=FUNDING_COST):
+    rates = np.asarray(model['rates'], dtype=float)
+    churn = np.array([churn_rate(rate, grade, model) for rate in rates])
+    retention = 1 - churn
+    unit_profit = retention * ((1 - pd_value) * rates - pd_value * lgd - funding_cost)
+    best = int(np.argmax(unit_profit))
+    return float(rates[best]), float(churn[best]), float(unit_profit[best])
 
-    # 1. 行业分类
-    if '企业名称' not in df.columns:
-        safe_print("  [WARNING] 无企业名称信息, 无法进行行业分类")
-        safe_print("  随机分配行业以演示调整效果")
-        industries = ['严重负面', '中度负面', '其他', '正面/轻影响']
-        df['行业类别'] = np.random.choice(industries, size=len(df),
-                                         p=[0.15, 0.30, 0.40, 0.15])
-    else:
-        df['行业类别'] = df['企业名称'].apply(classify_industry)
 
-    safe_print("\n  行业分布:")
-    industry_counts = df['行业类别'].value_counts()
-    for ind, cnt in industry_counts.items():
-        safe_print(f"    {ind}: {cnt}家 ({cnt/len(df)*100:.1f}%)")
+def _solve_allocation(unit_profit, budget, loan_min=LOAN_MIN, loan_max=LOAN_MAX):
+    unit_profit = np.asarray(unit_profit, dtype=float)
+    n = len(unit_profit)
+    if n == 0:
+        raise ValueError('没有符合条件的放贷企业')
+    if budget < loan_min - 1e-9 or budget > n * loan_max + 1e-9:
+        raise ValueError(f'预算{budget:.2f}万元不可行；当前候选企业可行上限为{n * loan_max:.2f}万元')
 
-    # 2. 行业冲击系数
-    shock_factors = {
-        '严重负面': 1.30,      # 风险增加30%
-        '中度负面': 1.15,      # 风险增加15%
-        '其他': 1.00,          # 无变化
-        '正面/轻影响': 0.90,   # 风险降低10%
-    }
+    objective = np.r_[-unit_profit, np.zeros(n)]
+    integrality = np.r_[np.zeros(n, dtype=int), np.ones(n, dtype=int)]
+    lower = np.zeros(2 * n)
+    upper = np.r_[np.full(n, loan_max), np.ones(n)]
 
-    # 3. 调整风险得分
-    df['冲击系数'] = df['行业类别'].map(shock_factors).fillna(1.0)
-    df['调整后得分'] = df['TOPSIS得分'] / df['冲击系数']  # 得分除以系数 = 风险调整
+    matrix = np.zeros((2 * n + 1, 2 * n), dtype=float)
+    constraint_lower = np.full(2 * n + 1, -np.inf)
+    constraint_upper = np.zeros(2 * n + 1)
+    for i in range(n):
+        matrix[2 * i, i] = 1
+        matrix[2 * i, n + i] = -loan_max
+        matrix[2 * i + 1, i] = -1
+        matrix[2 * i + 1, n + i] = loan_min
+    matrix[-1, :n] = 1
+    constraint_lower[-1] = budget
+    constraint_upper[-1] = budget
 
-    # 确保得分在有效范围内
-    df['调整后得分'] = df['调整后得分'].clip(0, 1)
-
-    # 4. 重新排序和分级
-    df = df.sort_values('调整后得分', ascending=False).reset_index(drop=True)
-    n = len(df)
-    df['调整后等级'] = 'D'
-    df.loc[df.index < n * 0.80, '调整后等级'] = 'C'
-    df.loc[df.index < n * 0.50, '调整后等级'] = 'B'
-    df.loc[df.index < n * 0.25, '调整后等级'] = 'A'
-
-    # 5. 重新计算利率：基于原始等级+行业冲击，而非重新分级
-    # 原则: 严重负面行业加息, 正面行业降息; 保持相对公平
-    base_rates = {'A': 0.04, 'B': 0.065, 'C': 0.10, 'D': 0.15}
-    rate_adj_map = {'严重负面': 0.02, '中度负面': 0.01, '其他': 0.0, '正面/轻影响': -0.01}
-
-    # 基于原始等级的基准利率
-    df['原始基准利率'] = df['风险等级'].map(base_rates).fillna(0.10)
-    df['行业利率调整'] = df['行业类别'].map(rate_adj_map).fillna(0.0)
-
-    # 调整后等级基准利率（如果等级变化了）
-    df['调整后基准利率'] = df['调整后等级'].map(base_rates).fillna(0.10)
-
-    # 利率 = max(原始基准, 调整后基准) + 行业调整
-    # 这样: 等级提升了会降息, 等级下降了不会因此大幅加息(但行业调整会)
-    df['调整后利率'] = np.where(
-        df['调整后基准利率'] < df['原始基准利率'],  # 等级提升(利率应下降)
-        df['调整后基准利率'] + df['行业利率调整'],   # 使用更好的等级
-        df['原始基准利率'] + df['行业利率调整']      # 保持原等级+行业调整
+    result = milp(
+        objective,
+        integrality=integrality,
+        bounds=Bounds(lower, upper),
+        constraints=LinearConstraint(matrix, constraint_lower, constraint_upper),
+        options={'time_limit': 60},
     )
-    df['调整后利率'] = df['调整后利率'].clip(0.04, 0.15)
+    if not result.success:
+        raise RuntimeError(f'信贷额度MILP求解失败: {result.message}')
+    loans = result.x[:n]
+    loans[np.abs(loans) < 1e-7] = 0
+    return loans
 
-    # 6. 调整后的额度分配
-    eligible = df[df['调整后等级'] != 'D']
-    total_budget = 10000
-    loan_min, loan_max = 10, 100
 
-    adj_scores = eligible['调整后得分'].values
-    total_adj_score = adj_scores.sum()
-    if total_adj_score > 0:
-        df['调整后额度'] = 0.0
-        eligible_initial = (adj_scores / total_adj_score) * total_budget
-        eligible_initial = np.clip(eligible_initial, loan_min, loan_max)
-        df.loc[eligible.index, '调整后额度'] = eligible_initial
+def allocate_credit(df_scores, total_budget, churn_model, lgd=LGD, funding_cost=FUNDING_COST):
+    df = df_scores.copy().reset_index(drop=True)
+    predicted_d = df['风险等级'].eq('D')
+    original_d = df['信誉评级'].eq('D') if '信誉评级' in df.columns else pd.Series(False, index=df.index)
+    eligible_mask = ~(predicted_d | original_d)
+    eligible = df.loc[eligible_mask].copy()
 
-        # 迭代再分配剩余/超出预算
-        for _ in range(30):
-            curr_total = df.loc[eligible.index, '调整后额度'].sum()
-            gap = total_budget - curr_total
-            if abs(gap) / total_budget < 0.0005:
-                break
-            if gap > 0:
-                # 有剩余: 给未达上限的企业加
-                under_cap = eligible.index[(df.loc[eligible.index, '调整后额度'] < loan_max)]
-                if len(under_cap) > 0:
-                    df.loc[under_cap, '调整后额度'] += gap / len(under_cap)
-                df['调整后额度'] = df['调整后额度'].clip(lower=0, upper=loan_max)
-            else:
-                # 超出: 从达上限的企业减
-                over_min = eligible.index[(df.loc[eligible.index, '调整后额度'] > loan_min)]
-                if len(over_min) > 0:
-                    df.loc[over_min, '调整后额度'] += gap / len(over_min)
-                df['调整后额度'] = df['调整后额度'].clip(lower=loan_min, upper=loan_max)
-    else:
-        df['调整后额度'] = df['贷款额度_万元']
+    rates, churns, units = [], [], []
+    for row in eligible.itertuples(index=False):
+        rate, churn, unit = choose_rate(float(getattr(row, '违约概率')), getattr(row, '风险等级'), churn_model, lgd, funding_cost)
+        rates.append(rate)
+        churns.append(churn)
+        units.append(unit)
+    eligible['贷款年利率'] = rates
+    eligible['预计流失率'] = churns
+    eligible['单位额度期望收益'] = units
+    eligible['贷款额度_万元'] = _solve_allocation(units, float(total_budget))
 
-    # 7. 对比分析
-    safe_print("\n  调整前后对比:")
-    safe_print(f"    放贷企业数: {df['贷款额度_万元'].gt(0).sum()} -> {df['调整后额度'].gt(0).sum()}")
-    safe_print(f"    总额度: {df['贷款额度_万元'].sum():.0f}万 -> {df['调整后额度'].sum():.0f}万")
-    safe_print(f"    平均利率: {df[df['贷款额度_万元']>0]['贷款年利率'].mean():.2%} -> {df[df['调整后额度']>0]['调整后利率'].mean():.2%}")
+    df['贷款额度_万元'] = 0.0
+    df['贷款年利率'] = 0.0
+    df['预计流失率'] = 0.0
+    df['单位额度期望收益'] = 0.0
+    for col in ['贷款额度_万元', '贷款年利率', '预计流失率', '单位额度期望收益']:
+        df.loc[eligible.index, col] = eligible[col]
 
-    # 行业维度分析
-    safe_print("\n  各行业调整后平均额度:")
-    for ind in ['严重负面', '中度负面', '其他', '正面/轻影响']:
-        mask = df['行业类别'] == ind
-        if mask.any():
-            avg_loan = df.loc[mask, '调整后额度'].mean()
-            avg_rate = df.loc[mask, '调整后利率'].mean()
-            safe_print(f"    {ind}: 均额{avg_loan:.1f}万, 均利率{avg_rate:.2%}")
+    df['禁贷原因'] = ''
+    df.loc[predicted_d, '禁贷原因'] = '预测D级'
+    df.loc[original_d, '禁贷原因'] = '银行原始D级'
+    df.loc[predicted_d & original_d, '禁贷原因'] = '银行原始D级且预测D级'
 
-    # 等级变化
-    changed = (df['风险等级'] != df['调整后等级']).sum()
-    safe_print(f"\n  等级变化: {changed}家企业等级发生调整")
+    amount = df['贷款额度_万元'].to_numpy(float)
+    rate = df['贷款年利率'].to_numpy(float)
+    retention = 1 - df['预计流失率'].to_numpy(float)
+    pd_value = df['违约概率'].to_numpy(float)
+    df['客户留存率'] = np.where(amount > 0, retention, 0.0)
+    df['预计实际放款额'] = amount * retention
+    df['名义利息'] = amount * rate
+    df['预计留存后利息'] = amount * retention * (1 - pd_value) * rate
+    df['预计违约损失'] = amount * retention * pd_value * lgd
+    df['预计资金成本'] = amount * retention * funding_cost
+    df['期望净收益'] = df['预计留存后利息'] - df['预计违约损失'] - df['预计资金成本']
+    df['预算强制负收益'] = (amount > 0) & (df['单位额度期望收益'] < 0)
 
+    total = df['贷款额度_万元'].sum()
+    if abs(total - total_budget) > 1e-4:
+        raise AssertionError(f'额度合计{total}与预算{total_budget}不一致')
+    if '信誉评级' in df.columns and (df.loc[df['信誉评级'].eq('D'), '贷款额度_万元'] > 0).any():
+        raise AssertionError('存在银行原始D级企业获得贷款')
+    print(f"  预算{total_budget:.0f}万元: 放贷{(amount > 0).sum()}家, 期望净收益{df['期望净收益'].sum():.2f}万元")
     return df
 
 
+def classify_industry(name):
+    if not isinstance(name, str) or re.fullmatch(r'\s*个体经营E\d+\s*', name):
+        return '未知', 0.0
+    cleaned = name.replace('***', '').replace('*', '').strip()
+    keyword_groups = [
+        ('严重负面', ['旅游', '旅行', '酒店', '宾馆', '住宿', '餐饮', '餐厅', '饭店', '影院', '电影', '娱乐', 'KTV', '演出', '会展', '航空', '客运']),
+        ('中度负面', ['建筑', '建设', '建材', '装修', '装饰', '房地产', '房产', '批发', '零售', '商贸', '商店', '超市', '商场', '制造', '加工', '生产', '工厂', '纺织', '服装', '运输', '物流', '货运', '快递', '教育', '培训', '学校', '汽车', '汽配', '车行']),
+        ('正面/轻影响', ['医疗', '医药', '药品', '生物', '卫生', '健康', '科技', '技术', '信息', '软件', '网络', '数据', '电子', '电商', '在线', '互联网', '数字', '通信', '通讯', '计算机']),
+    ]
+    for category, keywords in keyword_groups:
+        if any(keyword in cleaned for keyword in keywords):
+            return category, 0.9
+    return '其他', 0.3
+
+
+def adjust_probability_by_odds(probability, factor):
+    probability = np.clip(np.asarray(probability, dtype=float), 1e-9, 1 - 1e-9)
+    odds = probability / (1 - probability)
+    adjusted = odds * np.asarray(factor, dtype=float)
+    return adjusted / (1 + adjusted)
+
+
+def apply_emergency_adjustment(df_scores, base_strategy, churn_model, total_budget=BUDGET_PROBLEM_2):
+    scores = df_scores.copy()
+    classified = scores['企业名称'].apply(classify_industry)
+    scores['行业类别'] = classified.map(lambda x: x[0])
+    scores['行业识别置信度'] = classified.map(lambda x: x[1])
+    scores['冲击系数'] = scores['行业类别'].map(SHOCK_FACTORS).fillna(1.0)
+    scores['原违约概率'] = scores['违约概率']
+    scores['原风险等级'] = scores['风险等级']
+    scores['违约概率'] = adjust_probability_by_odds(scores['违约概率'], scores['冲击系数'])
+    scores['风险等级'] = grade_from_pd(scores['违约概率'])
+
+    adjusted = allocate_credit(scores, total_budget, churn_model)
+    adjusted = adjusted.rename(columns={
+        '违约概率': '调整后违约概率',
+        '风险等级': '调整后等级',
+        '贷款额度_万元': '调整后额度',
+        '贷款年利率': '调整后利率',
+        '预计流失率': '调整后预计流失率',
+        '期望净收益': '调整后期望净收益',
+    })
+    original = base_strategy[['企业代号', '违约概率', '风险等级', '贷款额度_万元', '贷款年利率', '预计流失率', '期望净收益']].rename(columns={
+        '违约概率': '原违约概率_策略',
+        '风险等级': '原风险等级_策略',
+        '贷款额度_万元': '原贷款额度',
+        '贷款年利率': '原贷款利率',
+        '预计流失率': '原预计流失率',
+        '期望净收益': '原期望净收益',
+    })
+    adjusted = adjusted.merge(original, on='企业代号', how='left')
+    if abs(adjusted['调整后额度'].sum() - total_budget) > 1e-4:
+        raise AssertionError('疫情调整后预算不等于目标预算')
+    print(f"  疫情调整: {(adjusted['原风险等级'] != adjusted['调整后等级']).sum()}家等级变化")
+    return adjusted
+
+
 def credit_strategy_pipeline(df_scores_1, df_scores_2):
-    """信贷策略完整流程"""
-    # 拟合利率-流失率模型
-    get_churn, coeffs = fit_rate_churn_model()
-
-    # 问题1: 123家企业 (总额=123*平均额度假设)
-    # 题目说"年度信贷总额固定", 假设为123家企业 * 60万 = 7380万 ≈ 8000万
-    total_1 = 8000  # 万元
-    safe_print(f"\n>>> 问题1信贷策略: 总额{total_1}万元 <<<")
-    strategy_1 = allocate_credit(df_scores_1, total_1, get_churn)
-
-    # 问题2: 302家企业, 总额1亿元
-    total_2 = 10000  # 万元 (1亿)
-    safe_print(f"\n>>> 问题2信贷策略: 总额{total_2}万元(1亿) <<<")
-    strategy_2 = allocate_credit(df_scores_2, total_2, get_churn)
-
-    # 问题3: 考虑突发因素调整
-    safe_print(f"\n>>> 问题3: 考虑疫情影响的信贷调整 <<<")
-    strategy_2_adjusted = apply_emergency_adjustment(df_scores_2, strategy_2, get_churn)
-
-    return strategy_1, strategy_2, strategy_2_adjusted, get_churn, coeffs
+    churn_model, churn_diagnostics = fit_rate_churn_model()
+    print('\n阶段4.2：期望收益信贷优化')
+    strategy1 = allocate_credit(df_scores_1, BUDGET_PROBLEM_1, churn_model)
+    strategy2 = allocate_credit(df_scores_2, BUDGET_PROBLEM_2, churn_model)
+    print('\n阶段5：疫情冲击赔率调整')
+    strategy3 = apply_emergency_adjustment(df_scores_2, strategy2, churn_model)
+    return strategy1, strategy2, strategy3, churn_model, churn_diagnostics
 
 
 if __name__ == '__main__':
-    base = os.path.dirname(__file__)
-    out = os.path.join(base, 'output')
+    from config import OUTPUT_DIR
 
-    # 加载评分数据
-    s1 = pd.read_csv(os.path.join(out, 'scores_附件1.csv'))
-    s2 = pd.read_csv(os.path.join(out, 'scores_附件2.csv'))
-
-    st1, st2, st2_adj, gc, cf = credit_strategy_pipeline(s1, s2)
-
-    # 保存结果
-    st1.to_csv(os.path.join(out, 'strategy_附件1.csv'), encoding='utf-8-sig', index=False)
-    st2.to_csv(os.path.join(out, 'strategy_附件2.csv'), encoding='utf-8-sig', index=False)
-    st2_adj.to_csv(os.path.join(out, 'strategy_附件2_疫情调整.csv'), encoding='utf-8-sig', index=False)
-    safe_print("\n[OK] 信贷策略结果已保存")
+    score1 = pd.read_csv(OUTPUT_DIR / 'scores_附件1.csv')
+    score2 = pd.read_csv(OUTPUT_DIR / 'scores_附件2.csv')
+    st1, st2, st3, _, _ = credit_strategy_pipeline(score1, score2)
+    st1.to_csv(OUTPUT_DIR / 'strategy_附件1.csv', index=False, encoding='utf-8-sig')
+    st2.to_csv(OUTPUT_DIR / 'strategy_附件2.csv', index=False, encoding='utf-8-sig')
+    st3.to_csv(OUTPUT_DIR / 'strategy_附件2_疫情调整.csv', index=False, encoding='utf-8-sig')

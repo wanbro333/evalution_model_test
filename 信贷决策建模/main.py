@@ -1,167 +1,144 @@
-"""
-主控脚本 - 中小微企业信贷决策建模
-2020年数学建模国赛C题完整解答
+"""中小微企业信贷决策模型的端到端运行入口。"""
+from __future__ import annotations
 
-流程:
-  Phase 1: 数据加载与SQLite入库
-  Phase 2: 特征工程
-  Phase 3: 风险评估模型 (AHP+熵权+TOPSIS)
-  Phase 4: 信贷策略制定
-  Phase 5: 突发因素(新冠疫情)调整
-  Phase 6: 灵敏度分析与可视化
-"""
-import os
+import json
 import sys
-import numpy as np
+from pathlib import Path
+
 import pandas as pd
 
-# 添加当前目录到路径
-sys.path.insert(0, os.path.dirname(__file__))
+MODULE_DIR = Path(__file__).resolve().parent
+if str(MODULE_DIR) not in sys.path:
+    sys.path.insert(0, str(MODULE_DIR))
 
+from config import OUTPUT_DIR, ensure_directories
+from credit_strategy import credit_strategy_pipeline
+from dashboard_renderer import write_dashboard
 from data_loader import load_all_data
 from feature_engineer import build_all_features
+from gen_paper_charts import create_all_charts
+from reporting import (
+    build_report_metrics,
+    export_excel,
+    save_report_metrics,
+    validate_workbook,
+    write_paper_macros,
+)
 from risk_model import risk_model_pipeline
-from credit_strategy import credit_strategy_pipeline
-from visualize import create_all_visualizations
 from sensitivity import run_sensitivity
 
 
-def safe_print(*args, **kwargs):
-    try:
-        print(*args, **kwargs)
-    except UnicodeEncodeError:
-        text = ' '.join(str(a) for a in args)
-        safe_text = text.encode('ascii', errors='replace').decode('ascii')
-        print(safe_text, **kwargs)
+def _save_json(data, path: Path) -> None:
+    with path.open('w', encoding='utf-8') as handle:
+        json.dump(data, handle, ensure_ascii=False, indent=2)
 
 
-def export_to_excel(df_scores_1, df_scores_2, strategy_1, strategy_2, strategy_2_adj, output_path):
-    """将结果导出到Excel"""
-    safe_print(f"\n[导出] 保存结果到 Excel: {os.path.basename(output_path)}")
-
-    with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-        # Sheet 1: 附件1评分
-        if df_scores_1 is not None:
-            cols1 = [c for c in ['企业代号', '企业名称', 'TOPSIS得分', '排名', '风险等级',
-                                 '信誉评级', '是否违约'] if c in df_scores_1.columns]
-            df_scores_1[cols1].to_excel(writer, sheet_name='附件1_风险评分', index=False)
-
-        # Sheet 2: 附件2评分
-        if df_scores_2 is not None:
-            cols2 = [c for c in ['企业代号', '企业名称', 'TOPSIS得分', '排名', '风险等级']
-                    if c in df_scores_2.columns]
-            df_scores_2[cols2].to_excel(writer, sheet_name='附件2_风险评分', index=False)
-
-        # Sheet 3: 问题1信贷策略
-        if strategy_1 is not None:
-            sc1 = [c for c in ['企业代号', '企业名称', '风险等级', 'TOPSIS得分',
-                               '贷款额度_万元', '贷款年利率', '预计流失率']
-                  if c in strategy_1.columns]
-            strategy_1[sc1].to_excel(writer, sheet_name='问题1_信贷策略', index=False)
-
-        # Sheet 4: 问题2信贷策略
-        if strategy_2 is not None:
-            sc2 = [c for c in ['企业代号', '企业名称', '风险等级', 'TOPSIS得分',
-                               '贷款额度_万元', '贷款年利率', '预计流失率']
-                  if c in strategy_2.columns]
-            strategy_2[sc2].to_excel(writer, sheet_name='问题2_信贷策略', index=False)
-
-        # Sheet 5: 问题3调整后策略
-        if strategy_2_adj is not None:
-            sc3 = [c for c in ['企业代号', '企业名称', '行业类别', '风险等级', '调整后等级',
-                               'TOPSIS得分', '调整后得分', '贷款额度_万元', '调整后额度',
-                               '贷款年利率', '调整后利率', '冲击系数']
-                  if c in strategy_2_adj.columns]
-            strategy_2_adj[sc3].to_excel(writer, sheet_name='问题3_疫情调整策略', index=False)
-
-    safe_print(f"  [OK] 已导出到: {output_path}")
+def _print_strategy(name, strategy, amount_col, net_col) -> None:
+    selected = strategy[strategy[amount_col] > 0]
+    print(
+        f"  {name}: 放贷{len(selected)}家，额度{selected[amount_col].sum():.0f}万元，"
+        f"期望净收益{strategy[net_col].sum():.2f}万元"
+    )
 
 
-def main():
-    """完整建模流程"""
-    print("=" * 70)
-    print("  中小微企业信贷决策建模")
-    print("  2020年数学建模国赛C题")
-    print("=" * 70)
+def main() -> dict:
+    """运行数据、风险、优化、报告与可视化全流程并返回核心指标。"""
+    ensure_directories()
+    print('=' * 72)
+    print('中小微企业信贷决策模型 2.0：监督PD + 收益优化')
+    print('=' * 72)
 
-    # ========== Phase 1: 数据加载 ==========
     conn = load_all_data()
+    try:
+        features1, features2 = build_all_features(conn)
+    finally:
+        conn.close()
 
-    # ========== Phase 2: 特征工程 ==========
-    df_features_1, df_features_2 = build_all_features(conn)
+    features1.to_csv(OUTPUT_DIR / 'features_附件1.csv', encoding='utf-8-sig')
+    features2.to_csv(OUTPUT_DIR / 'features_附件2.csv', encoding='utf-8-sig')
 
-    # 保存特征
-    base_dir = os.path.dirname(__file__)
-    out_dir = os.path.join(base_dir, 'output')
-    df_features_1.to_csv(os.path.join(out_dir, 'features_附件1.csv'), encoding='utf-8-sig')
-    df_features_2.to_csv(os.path.join(out_dir, 'features_附件2.csv'), encoding='utf-8-sig')
+    scores1, scores2, model_package, validation, coefficients = risk_model_pipeline(
+        features1, features2
+    )
+    scores1.to_csv(OUTPUT_DIR / 'scores_附件1.csv', index=False, encoding='utf-8-sig')
+    scores2.to_csv(OUTPUT_DIR / 'scores_附件2.csv', index=False, encoding='utf-8-sig')
+    coefficients.to_csv(OUTPUT_DIR / 'model_coefficients.csv', index=False, encoding='utf-8-sig')
+    _save_json(model_package, OUTPUT_DIR / 'model_package.json')
 
-    # ========== Phase 3: 风险评估 ==========
-    df_scores_1, df_scores_2, w_dict = risk_model_pipeline(df_features_1, df_features_2)
+    strategy1, strategy2, strategy3, churn_model, churn_diagnostics = credit_strategy_pipeline(
+        scores1, scores2
+    )
+    strategy1.to_csv(OUTPUT_DIR / 'strategy_附件1.csv', index=False, encoding='utf-8-sig')
+    strategy2.to_csv(OUTPUT_DIR / 'strategy_附件2.csv', index=False, encoding='utf-8-sig')
+    strategy3.to_csv(OUTPUT_DIR / 'strategy_附件2_疫情调整.csv', index=False, encoding='utf-8-sig')
+    _save_json(churn_model, OUTPUT_DIR / 'churn_model.json')
 
-    # 保存评分
-    df_scores_1.to_csv(os.path.join(out_dir, 'scores_附件1.csv'), encoding='utf-8-sig', index=False)
-    df_scores_2.to_csv(os.path.join(out_dir, 'scores_附件2.csv'), encoding='utf-8-sig', index=False)
-
-    # ========== Phase 4: 信贷策略 ==========
-    strategy_1, strategy_2, strategy_2_adj, get_churn, coeffs = credit_strategy_pipeline(
-        df_scores_1, df_scores_2
+    sensitivity_trials, indicator_removal, sensitivity_summary = run_sensitivity(
+        features1, model_package
+    )
+    sensitivity_trials.to_csv(
+        OUTPUT_DIR / 'sensitivity_trials.csv', index=False, encoding='utf-8-sig'
+    )
+    indicator_removal.to_csv(
+        OUTPUT_DIR / 'indicator_removal.csv', index=False, encoding='utf-8-sig'
     )
 
-    # 保存策略
-    strategy_1.to_csv(os.path.join(out_dir, 'strategy_附件1.csv'), encoding='utf-8-sig', index=False)
-    strategy_2.to_csv(os.path.join(out_dir, 'strategy_附件2.csv'), encoding='utf-8-sig', index=False)
-    strategy_2_adj.to_csv(os.path.join(out_dir, 'strategy_附件2_疫情调整.csv'),
-                          encoding='utf-8-sig', index=False)
-
-    # ========== Phase 5: 突发因素（已在credit_strategy_pipeline中完成）==========
-
-    # ========== Phase 6: 灵敏度分析 ==========
-    # 从w_dict提取权重（对齐特征列）
-    sensitivity_results = run_sensitivity(df_features_1, df_scores_1, w_dict)
-
-    # ========== 可视化 ==========
-    create_all_visualizations(
-        df_scores_1, df_scores_2, strategy_2_adj, coeffs, w_dict
+    metrics = build_report_metrics(
+        scores1,
+        scores2,
+        strategy1,
+        strategy2,
+        strategy3,
+        validation,
+        sensitivity_summary,
+        churn_diagnostics,
+        model_package,
     )
+    create_all_charts(
+        scores1,
+        scores2,
+        features1,
+        coefficients,
+        churn_model,
+        sensitivity_trials,
+        strategy1,
+        strategy2,
+        strategy3,
+        metrics['data_summary'],
+    )
+    metrics_path = save_report_metrics(metrics)
+    macros_path = write_paper_macros(metrics)
+    dashboard_path = write_dashboard(metrics)
+    excel_path = export_excel(
+        scores1,
+        scores2,
+        strategy1,
+        strategy2,
+        strategy3,
+        coefficients,
+        validation,
+        sensitivity_trials,
+        indicator_removal,
+        OUTPUT_DIR / '信贷决策建模结果.xlsx',
+    )
+    workbook_check = validate_workbook(excel_path)
+    if workbook_check['errors'] or workbook_check['formula_count'] == 0:
+        raise RuntimeError(f'Excel产物校验失败: {workbook_check}')
 
-    # ========== 导出Excel ==========
-    output_excel = os.path.join(out_dir, '信贷决策建模结果.xlsx')
-    export_to_excel(df_scores_1, df_scores_2, strategy_1, strategy_2, strategy_2_adj, output_excel)
-
-    # ========== 汇总报告 ==========
-    print("\n" + "=" * 70)
-    print("  建模完成 - 结果汇总")
-    print("=" * 70)
-
-    print(f"\n问题1 (123家, 总额8000万):")
-    if strategy_1 is not None:
-        loan_count = (strategy_1['贷款额度_万元'] > 0).sum()
-        total_loan = strategy_1['贷款额度_万元'].sum()
-        print(f"  放贷: {loan_count}家, 总额: {total_loan:.0f}万元")
-        print(f"  利率范围: {strategy_1[strategy_1['贷款额度_万元']>0]['贷款年利率'].min():.2%} - "
-              f"{strategy_1[strategy_1['贷款额度_万元']>0]['贷款年利率'].max():.2%}")
-
-    print(f"\n问题2 (302家, 总额1亿):")
-    if strategy_2 is not None:
-        loan_count2 = (strategy_2['贷款额度_万元'] > 0).sum()
-        total_loan2 = strategy_2['贷款额度_万元'].sum()
-        print(f"  放贷: {loan_count2}家, 总额: {total_loan2:.0f}万元")
-
-    print(f"\n问题3 (疫情调整):")
-    if strategy_2_adj is not None:
-        changed = (strategy_2_adj['风险等级'] != strategy_2_adj['调整后等级']).sum()
-        print(f"  等级调整: {changed}家")
-        for ind in ['严重负面', '中度负面', '正面/轻影响']:
-            mask = strategy_2_adj['行业类别'] == ind
-            if mask.any():
-                adj_loan = strategy_2_adj.loc[mask, '调整后额度'].mean()
-                print(f"  {ind}: 均额{adj_loan:.1f}万元")
-
-    conn.close()
-    print("\n" + "=" * 70)
-    print("  所有结果已保存到 信贷决策建模/ 目录")
-    print("=" * 70)
+    print('\n结果摘要')
+    _print_strategy('问题1', strategy1, '贷款额度_万元', '期望净收益')
+    _print_strategy('问题2', strategy2, '贷款额度_万元', '期望净收益')
+    _print_strategy('问题3', strategy3, '调整后额度', '调整后期望净收益')
+    print(
+        f"  样本外ROC-AUC={validation['roc_auc']:.4f}，"
+        f"PR-AUC={validation['pr_auc']:.4f}，Brier={validation['brier']:.4f}"
+    )
+    print(f"  Excel公式数={workbook_check['formula_count']}，结构错误={len(workbook_check['errors'])}")
+    print(f'  指标: {metrics_path}')
+    print(f'  Excel: {excel_path}')
+    print(f'  Dashboard: {dashboard_path}')
+    print(f'  LaTeX宏: {macros_path}')
+    return metrics
 
 
 if __name__ == '__main__':

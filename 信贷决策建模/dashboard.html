@@ -1,516 +1,85 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>中小微企业信贷决策 · 数据看板</title>
-<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Noto+Serif+SC:wght@400;600;700;900&display=swap" rel="stylesheet">
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="中小微企业信贷决策模型的离线论文伴读与结果展示">
+<title>中小微企业信贷决策模型伴读</title>
 <style>
-:root {
-  --bg: #f8f7f4;
-  --card: #ffffff;
-  --text: #1a1a2e;
-  --text-muted: #6b7280;
-  --navy: #16213e;
-  --navy-light: #1a3050;
-  --teal: #0d7377;
-  --teal-light: #14a3a8;
-  --gold: #c9a93e;
-  --gold-light: #f5e6a3;
-  --red: #c0392b;
-  --orange: #e67e22;
-  --green: #1b7a3d;
-  --blue: #2874a6;
-  --border: #e8e5df;
-  --radius: 10px;
-  --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05);
-}
+:root{--bg:#f3f6f6;--paper:#fff;--ink:#12212f;--muted:#5f7079;--line:#d7e0e3;--navy:#17324d;--accent:#0f766e;--soft:#e9f3f2;--radius:12px;--mono:Consolas,"SFMono-Regular",monospace}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:76px;overflow-x:clip}body{margin:0;min-width:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;line-height:1.72}
+a{color:var(--accent)}a:focus-visible,summary:focus-visible{outline:3px solid #79b8b1;outline-offset:3px}
+.topbar{position:sticky;top:0;z-index:10;height:68px;background:var(--navy);color:#f5f8f8;border-bottom:1px solid #2e4c63}
+.nav{max-width:1240px;min-width:0;height:100%;margin:auto;padding:0 24px;display:flex;align-items:center;gap:28px}.brand{flex:0 0 auto;font-weight:700;white-space:nowrap}.navlinks{min-width:0;flex:1;margin-left:auto;display:flex;justify-content:flex-end;gap:20px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}.navlinks a{flex:0 0 auto;color:#cbd7dd;text-decoration:none;font-size:13px}.navlinks a:hover{color:#fff}
+main{max-width:1240px;min-width:0;margin:auto;padding:0 24px 76px}.hero{min-width:0;min-height:520px;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(360px,.88fr);gap:58px;align-items:center;border-bottom:1px solid var(--line)}.hero>*{min-width:0}
+.hero h1{font-size:clamp(34px,4.5vw,58px);line-height:1.12;letter-spacing:-1.6px;margin:0 0 20px;max-width:12ch}.hero p{font-size:17px;color:var(--muted);max-width:54ch;margin:0}
+.journey{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:24px}.journey h2{font-size:15px;margin:0 0 15px}.journey ol{list-style:none;padding:0;margin:0;counter-reset:item}.journey li{counter-increment:item;display:grid;grid-template-columns:34px 1fr;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}.journey li:last-child{border-bottom:0}.journey li:before{content:counter(item);font:700 13px/28px var(--mono);width:28px;height:28px;text-align:center;border:1px solid var(--accent);border-radius:50%;color:var(--accent)}.journey b{display:block;font-size:14px}.journey span{display:block;font-size:12px;color:var(--muted)}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}.metric{padding:25px 18px 25px 0;border-right:1px solid var(--line)}.metric:not(:first-child){padding-left:22px}.metric:last-child{border-right:0}.metric b{display:block;color:var(--accent);font:700 31px/1.1 var(--mono)}.metric span{font-size:12px;color:var(--muted)}
+section{padding:58px 0;border-bottom:1px solid var(--line)}.section-head{margin-bottom:26px}.section-head h2{font-size:28px;line-height:1.25;margin:0 0 9px;color:var(--navy)}.section-head p{margin:0;max-width:68ch;color:var(--muted)}
+.with-aside{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:34px;align-items:start}.aside{position:sticky;top:92px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:18px}.aside h3{font-size:14px;margin:0 0 10px}.aside p,.aside li{font-size:12px;color:var(--muted)}.aside ul{margin:0;padding-left:18px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start}.grid-wide{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:start}
+figure{margin:0;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:14px}figure img{display:block;width:100%;height:auto}figcaption{font-size:12px;color:var(--muted);margin-top:8px}
+.note{margin:18px 0;padding:14px 16px;border-left:3px solid var(--accent);background:var(--soft);font-size:14px}.note b{color:var(--navy)}
+.formula{margin:16px 0;padding:17px 20px;background:var(--navy);color:#f4f8f8;border-radius:var(--radius);font:600 15px/1.7 var(--mono);overflow-x:auto}.formula small{display:block;color:#bed0d7;font:12px/1.6 "Microsoft YaHei",sans-serif}
+.concepts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px}.concepts article{padding:17px 0;border-top:1px solid var(--line)}.concepts h3{font-size:15px;margin:0 0 5px}.concepts p{font-size:13px;color:var(--muted);margin:0}
+.table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper)}table{width:100%;border-collapse:collapse;min-width:620px;font-size:13px}th,td{padding:11px 13px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}th:first-child,td:first-child{text-align:left}thead th{background:#eaf0f1;color:#344d5a;font-weight:700}tbody tr:last-child th,tbody tr:last-child td{border-bottom:0}.strong{color:var(--accent);font-weight:700}
+details{margin-top:14px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:0 16px}summary{cursor:pointer;padding:13px 0;color:var(--navy);font-weight:700}details p,details ul{font-size:13px;color:var(--muted)}
+.downloads{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px}.download{display:block;padding:18px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);text-decoration:none;color:var(--ink)}.download:hover{border-color:var(--accent);transform:translateY(-1px)}.download b{display:block;color:var(--navy)}.download span{font-size:12px;color:var(--muted)}
+footer{max-width:1240px;margin:auto;padding:26px 24px 42px;color:var(--muted);font-size:12px}
+@media(max-width:900px){.hero{grid-template-columns:1fr;gap:28px;padding:54px 0;min-height:auto}.hero h1{max-width:none}.with-aside,.grid-wide{grid-template-columns:1fr}.aside{position:static}.metrics{grid-template-columns:1fr 1fr}.metric:nth-child(2){border-right:0}.downloads{grid-template-columns:1fr}}
+@media(max-width:640px){html{scroll-padding-top:112px}.topbar{height:104px}.nav{height:100%;padding:12px 16px 9px;flex-direction:column;align-items:flex-start;justify-content:center;gap:9px}.brand{font-size:14px;line-height:1.2}.navlinks{width:100%;flex:0 0 auto;margin:0;justify-content:flex-start;gap:18px;padding-bottom:2px}main{width:100%;padding-left:16px;padding-right:16px}.hero h1{max-width:100%;font-size:clamp(31px,9.2vw,36px);letter-spacing:-.8px;overflow-wrap:anywhere;word-break:break-all}.metrics{grid-template-columns:1fr}.metric,.metric:not(:first-child){padding:18px 0;border-right:0;border-bottom:1px solid var(--line)}.concepts,.grid2{grid-template-columns:1fr}section{padding:44px 0}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+@media print{.topbar,.aside{display:none}body{background:#fff}main{max-width:none;padding:0}section{break-inside:avoid}a{color:#000;text-decoration:none}}
+</style></head><body>
+<header class="topbar"><nav class="nav" aria-label="主导航"><div class="brand">中小微企业信贷决策</div><div class="navlinks"><a href="#model">模型全景</a><a href="#data">数据处理</a><a href="#validation">风险预测</a><a href="#pricing">利率定价</a><a href="#strategy">额度策略</a><a href="#sensitivity">模型可靠性</a></div></nav></header>
+<main>
+<section class="hero" id="model"><div><h1>从一张发票，<br>到一笔可解释的贷款</h1><p>沿着数据处理、违约预测、利率定价和额度优化，理解银行如何把历史交易转化为可执行的信贷策略。</p></div>
+<div class="journey"><h2>模型旅程</h2><ol>
+<li><div><b>整理票据</b><span>保留红冲符号，补齐无交易月份</span></div></li>
+<li><div><b>估计PD</b><span>用真实违约标签学习风险概率</span></div></li>
+<li><div><b>选择利率</b><span>权衡利息增加与客户流失</span></div></li>
+<li><div><b>配置额度</b><span>在预算和禁贷约束下求最优组合</span></div></li>
+<li><div><b>压力重算</b><span>疫情冲击后重新评级、定价和分配</span></div></li>
+</ol></div></section>
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+<div class="metrics" aria-label="核心验证指标"><div class="metric"><b>0.856</b><span>样本外 ROC-AUC</span></div><div class="metric"><b>0.734</b><span>样本外 PR-AUC</span></div><div class="metric"><b>0.107</b><span>Brier 分数，越低越好</span></div><div class="metric"><b>0</b><span>原始D级获贷企业数</span></div></div>
 
-body {
-  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.7;
-  -webkit-font-smoothing: antialiased;
-}
+<section id="data"><div class="section-head"><h2>数据先要算对，模型才有意义</h2><p>发票记录很多，但监督样本只有123家。数据处理的重点不是堆指标，而是保留退货、作废和经营断档的真实经济含义。</p></div>
+<div class="with-aside"><div><div class="grid-wide"><figure><img src="output/charts/fig_data_scale.png" alt="附件1和附件2进销项发票数量"><figcaption>附件1共373,431条发票，附件2共726,010条发票</figcaption></figure><div>
+<div class="note"><b>红冲示例</b><br>先开100万元发票，再发生20万元退货，真实净额是80万元。若把负数取绝对值，就会错误得到120万元。</div>
+<div class="formula">年化收入 = 12 × 观察期销项净额 / 观察月数<small>无交易月份补0，因此活跃比例和波动率不会被虚假美化。</small></div></div></div>
+<div class="concepts"><article><h3>规模与盈利</h3><p>年化收入、年化利润、利润率、客户数和供应商数。</p></article><article><h3>稳定与趋势</h3><p>收入和成本波动、收入趋势，识别剧烈变化与持续收缩。</p></article><article><h3>经营连续性</h3><p>活跃月份比例和最近断档月数，区分持续经营与偶发交易。</p></article><article><h3>票据行为</h3><p>进销项作废、负数发票和负数金额比例。</p></article></div></div>
+<aside class="aside"><h3>本节要点</h3><ul><li>只有有效发票进入净额。</li><li>负数有效票据冲减收入或成本。</li><li>作废票不计金额，但保留作废率。</li><li>附件2沿用附件1的处理参数。</li></ul></aside></div></section>
 
-/* Navigation */
-nav {
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(22,33,62,0.97);
-  backdrop-filter: blur(12px);
-  padding: 0 40px; height: 60px;
-  display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-nav .logo { font-family: 'Noto Serif SC', serif; font-weight: 900; font-size: 19px; color: #fff; }
-nav .logo span { color: var(--gold); }
-nav ul { display: flex; gap: 28px; list-style: none; }
-nav a { color: rgba(255,255,255,0.65); text-decoration: none; font-size: 13px; font-weight: 500; transition: color 0.2s; }
-nav a:hover { color: var(--gold); }
+<section id="validation"><div class="section-head"><h2>风险预测：让历史违约标签说话</h2><p>逻辑回归输出一年期违约概率PD。所有效果指标来自重复嵌套样本外预测，不用训练内成绩证明自己。</p></div>
+<div class="with-aside"><div><div class="formula">PD = 1 / (1 + exp(-z))<small>z由16项标准化经营特征加权得到，L2正则抑制小样本过拟合。</small></div>
+<div class="grid2"><figure><img src="output/charts/fig_default_rate.png" alt="不同PD等级的企业数和实际违约率"><figcaption>固定PD档位的实际违约率逐级上升</figcaption></figure><figure><img src="output/charts/fig_pd_distribution.png" alt="附件1和附件2的预测PD分布"><figcaption>附件2使用附件1训练得到的同一风险尺度</figcaption></figure></div>
+<div class="table-scroll"><table><thead><tr><th>等级</th><th>企业数</th><th>违约数</th><th>实际违约率</th><th>平均PD</th></tr></thead><tbody><tr><th scope='row'>A级</th><td>56</td><td>3</td><td>5.4%</td><td>5.6%</td></tr><tr><th scope='row'>B级</th><td>32</td><td>4</td><td>12.5%</td><td>13.6%</td></tr><tr><th scope='row'>C级</th><td>15</td><td>4</td><td>26.7%</td><td>28.8%</td></tr><tr><th scope='row'>D级</th><td>20</td><td>16</td><td>80.0%</td><td>61.1%</td></tr></tbody></table></div>
+<details><summary>ROC-AUC、PR-AUC和Brier分别是什么意思？</summary><ul><li>ROC-AUC衡量模型把违约企业排在高风险位置的能力。</li><li>PR-AUC更关注少数违约样本能否在高风险名单中被找出。</li><li>Brier是预测概率与真实0/1结果的平均平方误差，越低越好。</li></ul></details>
+</div><aside class="aside"><h3>为什么要嵌套交叉验证</h3><p>内层选择正则强度，外层评价完整建模流程。测试企业从未参与预处理、参数选择和训练，因此结果比训练内准确率更可信。</p><p><b>27家</b>已知违约企业构成监督信号。</p></aside></div></section>
 
-/* Hero */
-.hero {
-  background: linear-gradient(160deg, #0f1923 0%, #162b3f 35%, #0d4a4f 100%);
-  padding: 90px 40px 70px; text-align: center; color: #fff;
-  position: relative; overflow: hidden;
-}
-.hero::after {
-  content: ''; position: absolute; top: -40%; right: -15%;
-  width: 700px; height: 700px;
-  background: radial-gradient(circle, rgba(201,169,62,0.06) 0%, transparent 70%);
-  border-radius: 50%;
-}
-.hero h1 { font-family: 'Noto Serif SC', serif; font-weight: 900; font-size: 44px; line-height: 1.25; max-width: 850px; margin: 0 auto 16px; position: relative; z-index: 1; }
-.hero h1 em { font-style: normal; color: var(--gold); }
-.hero .subtitle { font-size: 15px; color: rgba(255,255,255,0.5); max-width: 620px; margin: 0 auto; font-weight: 300; position: relative; z-index: 1; }
+<section id="topsis"><div class="section-head"><h2>TOPSIS负责解释经营质量，不冒充PD</h2><p>PD回答会不会违约，TOPSIS回答企业离理想经营状态有多近。两者互补，但用途不同。</p></div><div class="grid-wide"><figure><img src="output/charts/fig_ranking.png" alt="附件1低风险企业排名"><figcaption>低PD企业的风险排序</figcaption></figure><div><div class="formula">TOPSIS得分 = 到负理想点距离 / 两个理想点距离之和<small>附件2沿用附件1的截尾边界、缩放尺度、权重和理想点。</small></div><div class="note"><b>为什么固定尺度</b><br>如果附件2重新归一化，同一家企业会因为比较对象变化而改变得分。固定附件1尺度后，相同经营状态拥有相同解释。</div></div></div></section>
 
-/* Stats */
-.stats-grid {
-  display: grid; grid-template-columns: repeat(4,1fr); gap: 18px;
-  max-width: 1200px; margin: -45px auto 0; padding: 0 40px;
-  position: relative; z-index: 10;
-}
-.stat {
-  background: var(--card); border-radius: var(--radius); padding: 26px 22px;
-  box-shadow: var(--shadow); border: 1px solid var(--border);
-  text-align: center; transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.stat:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,0.09); }
-.stat .value {
-  font-family: 'Inter', sans-serif; font-size: 38px; font-weight: 800;
-  letter-spacing: -1.5px; line-height: 1; margin-bottom: 6px;
-}
-.stat .value.t1 { color: var(--teal); }
-.stat .value.t2 { color: var(--gold); }
-.stat .value.t3 { color: var(--blue); }
-.stat .value.t4 { color: var(--red); }
-.stat .label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+<section id="pricing"><div class="section-head"><h2>利率越高，银行不一定赚得越多</h2><p>高利率增加单笔利息，也提高客户流失。保序回归先得到随利率非降的流失率，再计算每个利率的期望收益。</p></div>
+<div class="with-aside"><div><div class="grid2"><figure><img src="output/charts/fig_rate_churn.png" alt="A到C级客户的利率与流失率曲线"><figcaption>局部逆序点经PAVA保序回归修复</figcaption></figure><figure><img src="output/charts/fig_profit_breakdown.png" alt="三问信贷策略的期望收益构成"><figcaption>净收益由留存后利息扣除违约损失和资金成本</figcaption></figure></div>
+<div class="formula">单位收益 = 留存率 × [(1 - PD) × 利率 - PD × LGD - 资金成本]<small>模型只在附件3真实出现的利率网格内选择，不做区间外外推。</small></div>
+<details><summary>用100万元贷款做一个简单计算</summary><p>若PD为8%，利率10%，流失率20%，LGD为60%，资金成本为2.5%，则单位额度期望收益为1.52%，100万元名义授信的期望净收益约1.52万元。</p></details></div>
+<aside class="aside"><h3>最容易忽略的两点</h3><ul><li>流失客户没有实际放款，也没有利息和资金成本。</li><li>高风险企业提高利率后，违约损失可能仍大于利息。</li></ul></aside></div></section>
 
-/* Layout */
-.container { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
-.section { margin: 70px 0; }
-.section-eyebrow {
-  font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700;
-  color: var(--teal); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px;
-}
-.section-title {
-  font-family: 'Noto Serif SC', serif; font-weight: 700; font-size: 26px;
-  color: var(--navy); margin-bottom: 8px;
-}
-.section-desc { font-size: 15px; color: var(--text-muted); max-width: 660px; }
+<section id="strategy"><div class="section-head"><h2>额度分配：从单户最优到全行最优</h2><p>MILP把每家企业的单位收益放进同一个预算池，同时执行D级禁贷、单户上下限和总预算约束。</p></div>
+<div class="formula">最大化 Σ(单位期望收益 × 授信额度)<small>约束：总额度等于预算；单户额度为0或10-100万元；原始D级和预测D级额度为0。</small></div>
+<div class="table-scroll"><table><thead><tr><th>方案</th><th>放贷企业</th><th>额度合计</th><th>平均利率</th><th>留存后利息</th><th>违约损失</th><th>资金成本</th><th>期望净收益</th></tr></thead><tbody><tr><th scope='row'>问题1</th><td>80</td><td>8000</td><td>12.31%</td><td>175.58</td><td>64.08</td><td>40.96</td><td class='strong'>70.54</td></tr><tr><th scope='row'>问题2</th><td>100</td><td>10000</td><td>10.28%</td><td>267.38</td><td>63.00</td><td>70.82</td><td class='strong'>133.56</td></tr><tr><th scope='row'>问题3</th><td>100</td><td>10000</td><td>10.35%</td><td>265.73</td><td>63.22</td><td>70.31</td><td class='strong'>132.19</td></tr></tbody></table></div>
+<div class="note"><b>为什么很多入选企业都是100万元？</b><br>当前目标对额度是线性的，题目又只给统一上限，所以模型会优先把额度投向单位收益最高的企业并触及上限。若要更分散，需要增加企业需求或行业集中度约束。</div></section>
 
-/* Chart grid */
-.chart-row { display: grid; gap: 22px; }
-.chart-row.col2 { grid-template-columns: 1fr 1fr; }
-.chart-row.col3 { grid-template-columns: 1fr 1fr 1fr; }
-.chart-row.col1 { grid-template-columns: 1fr; }
+<section id="emergency"><div class="section-head"><h2>疫情冲击后，完整重算而不是简单打折</h2><p>行业冲击乘到违约赔率上，得到新PD后重新评级、重新选择利率并重新分配额度。共有8家企业跨越等级阈值。</p></div>
+<div class="grid2"><figure><img src="output/charts/fig_covid.png" alt="疫情冲击前后行业平均授信额度"><figcaption>行业平均额度的真实重优化结果</figcaption></figure><div class="table-scroll"><table><thead><tr><th>行业类别</th><th>企业数</th><th>原额度</th><th>新额度</th><th>原PD</th><th>新PD</th></tr></thead><tbody><tr><th scope='row'>严重负面</th><td>3</td><td>100.0</td><td>100.0</td><td>4.2%</td><td>5.4%</td></tr><tr><th scope='row'>中度负面</th><td>82</td><td>24.4</td><td>19.5</td><td>18.6%</td><td>20.3%</td></tr><tr><th scope='row'>其他</th><td>118</td><td>33.1</td><td>35.6</td><td>18.0%</td><td>18.0%</td></tr><tr><th scope='row'>未知</th><td>56</td><td>44.6</td><td>44.6</td><td>16.2%</td><td>16.2%</td></tr><tr><th scope='row'>正面/轻影响</th><td>43</td><td>30.2</td><td>32.6</td><td>20.3%</td><td>19.1%</td></tr></tbody></table></div></div>
+<details><summary>为什么调整赔率，而不是直接乘概率？</summary><p>赔率没有1的上界，乘以冲击系数后再还原为概率，可以保证新PD始终位于0和1之间。脱敏名称无法识别行业的企业标为未知，不强行分类。</p></details></section>
 
-.chart-box {
-  background: var(--card); border-radius: var(--radius);
-  padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border);
-}
-.chart-box h3 { font-family: 'Noto Serif SC', serif; font-weight: 600; font-size: 15px; color: var(--navy); margin-bottom: 12px; }
-.chart-inner { width: 100%; }
-.chart-inner.h400 { height: 400px; }
-.chart-inner.h300 { height: 300px; }
-.chart-inner.h500 { height: 500px; }
+<section id="sensitivity"><div class="section-head"><h2>模型可靠吗：稳定不等于没有局限</h2><p>100次权重扰动都真实重算TOPSIS得分和排名。排名稳定说明小幅权重误差影响有限，但不能替代更大样本和跨年度验证。</p></div>
+<div class="with-aside"><div class="grid2"><figure><img src="output/charts/fig_sensitivity.png" alt="100次TOPSIS权重扰动结果"><figcaption>Spearman均值0.9983，最小值0.9958</figcaption></figure><figure><img src="output/charts/fig_weights.png" alt="逻辑回归标准化特征系数"><figcaption>系数表示其他变量不变时的风险方向，不代表因果关系</figcaption></figure></div>
+<details open><summary>当前模型的适用边界</summary><ul><li>附件1只有123家企业，需要新增年度数据进行外部验证和概率再校准。</li><li>LGD、资金成本和问题1预算是业务假设，应按银行真实参数重跑。</li><li>行业识别来自脱敏名称，疫情结果是压力测试而非精确因果预测。</li><li>当前未加入企业真实资金需求、行业集中度和组合尾部风险。</li></ul></details></div>
+<aside class="aside"><h3>稳健性摘要</h3><p>Spearman均值 <b>0.9983</b></p><p>Kendall均值 <b>0.9729</b></p><p>影响最大指标 <b>年化利润</b></p></aside></div></section>
 
-/* Case study cards */
-.case-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 28px; }
-.case-card {
-  background: var(--card); border-radius: var(--radius);
-  padding: 28px 24px; box-shadow: var(--shadow); border: 1px solid var(--border);
-  transition: transform 0.2s;
-}
-.case-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,0.08); }
-.case-card .case-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-.case-card .case-id { font-family: 'Noto Serif SC', serif; font-weight: 900; font-size: 22px; }
-.case-card .case-grade {
-  padding: 3px 12px; border-radius: 100px;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
-}
-.grade-a { background: #dcfce7; color: #166534; }
-.grade-c { background: #fff7ed; color: #9a3412; }
-.grade-d { background: #fef2f2; color: #991b1b; }
-.case-card .case-score { font-family: 'Inter', sans-serif; font-size: 32px; font-weight: 800; margin: 8px 0; }
-.case-card .case-score.a { color: var(--green); }
-.case-card .case-score.c { color: var(--orange); }
-.case-card .case-score.d { color: var(--red); }
-.case-card .case-metrics { font-size: 13px; color: var(--text-muted); line-height: 2; }
-.case-card .case-metrics strong { color: var(--text); font-weight: 600; }
-.case-card .case-verdict { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-muted); line-height: 1.7; }
-
-/* Info panel */
-.info-panel {
-  background: linear-gradient(135deg, #f0f7f7 0%, #f7f5f2 100%);
-  border-radius: var(--radius); padding: 30px 34px;
-  border: 1px solid rgba(13,115,119,0.1); margin-top: 24px;
-}
-.info-panel h3 { font-family: 'Noto Serif SC', serif; font-weight: 700; font-size: 18px; margin-bottom: 10px; color: var(--navy); }
-.info-panel p { font-size: 14px; color: var(--text-muted); line-height: 1.9; }
-.info-panel .hl { color: var(--teal); font-weight: 600; }
-
-/* Table */
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.8px; text-transform: uppercase; border-bottom: 2px solid var(--border); }
-.data-table td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
-.data-table tr:hover td { background: #fcfbf9; }
-
-.tag { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; }
-.tag-a { background: #dcfce7; color: #166534; }
-.tag-b { background: #dbeafe; color: #1e40af; }
-.tag-c { background: #fff7ed; color: #9a3412; }
-.tag-d { background: #fef2f2; color: #991b1b; }
-
-footer {
-  background: var(--navy); color: rgba(255,255,255,0.45);
-  text-align: center; padding: 40px; font-size: 13px; margin-top: 80px;
-}
-footer a { color: var(--gold); text-decoration: none; }
-
-@media (max-width: 900px) {
-  .stats-grid { grid-template-columns: 1fr 1fr; }
-  .chart-row.col2, .chart-row.col3, .case-grid { grid-template-columns: 1fr; }
-  .hero h1 { font-size: 28px; }
-  nav { padding: 0 16px; }
-  .container { padding: 0 16px; }
-}
-</style>
-</head>
-<body>
-
-<nav>
-  <div class="logo">信贷<span>决策</span>看板</div>
-  <ul>
-    <li><a href="#cases">案例分析</a></li>
-    <li><a href="#risk">风险评分</a></li>
-    <li><a href="#strategy">信贷策略</a></li>
-    <li><a href="#covid">疫情调整</a></li>
-  </ul>
-</nav>
-
-<section class="hero">
-  <h1>中小微企业<em>信贷决策</em>模型</h1>
-  <p class="subtitle">基于AHP-熵权-TOPSIS评价框架，对425家企业的发票数据进行分析，为银行提供定量化信贷决策支持</p>
-</section>
-
-<div class="stats-grid">
-  <div class="stat"><div class="value t1">425</div><div class="label">评估企业总数</div></div>
-  <div class="stat"><div class="value t2">1.8<span style="font-size:18px">亿</span></div><div class="label">信贷总预算</div></div>
-  <div class="stat"><div class="value t3">339<span style="font-size:14px">家</span></div><div class="label">获得贷款企业</div></div>
-  <div class="stat"><div class="value t4">5.6<span style="font-size:14px">倍</span></div><div class="label">D级vs A级违约倍率</div></div>
-</div>
-
-<div class="container">
-
-  <!-- ====== CASE STUDIES ====== -->
-  <section class="section" id="cases">
-    <div class="section-eyebrow">典型企业分析</div>
-    <div class="section-title">三家企业的信贷画像</div>
-    <div class="section-desc">从425家企业中选取三个典型案例，从原始发票数据出发，展示模型如何综合多个维度给出风险评分。</div>
-
-    <div class="case-grid">
-      <!-- E38: Best -->
-      <div class="case-card">
-        <div class="case-header">
-          <span class="case-id">E38</span>
-          <span class="case-grade grade-a">模型A级</span>
-        </div>
-        <div class="case-score a">0.848</div>
-        <div class="case-metrics">
-          <strong>收入规模</strong>&nbsp; 远超行业均值，属头部企业<br>
-          <strong>利润率</strong>&nbsp; 远超20%，盈利健康<br>
-          <strong>客户网络</strong>&nbsp; 广泛，单一客户依赖度低<br>
-          <strong>收入波动</strong>&nbsp; 远低于平均，经营稳定<br>
-          <strong>发票有效率</strong>&nbsp; >99%，几乎无异常<br>
-          <strong>作废率</strong>&nbsp; <1%，交易规范<br>
-          <strong>增长率</strong>&nbsp; 温和正增长，无异常波动
-        </div>
-        <div class="case-verdict">
-          <strong>银行原评级：B</strong><br>
-          模型给出A级（最高评分）：该企业在所有维度全面领先，发票表现极为健康。银行可能低估了其真实信用水平。建议：<strong>100万额度，最低利率4%</strong>。
-        </div>
-      </div>
-
-      <!-- E64: Bank A, Model C -->
-      <div class="case-card">
-        <div class="case-header">
-          <span class="case-id">E64</span>
-          <span class="case-grade grade-c">模型C级</span>
-        </div>
-        <div class="case-score c">0.188</div>
-        <div class="case-metrics">
-          <strong>收入规模</strong>&nbsp; 中等偏上，有一定实力<br>
-          <strong>利润率</strong>&nbsp; 极低，盈利能力弱<br>
-          <strong>收入波动</strong>&nbsp; 剧烈（>2倍标准差），不稳定<br>
-          <strong>成本波动</strong>&nbsp; 极高（>3倍标准差），失控<br>
-          <strong>发票有效率</strong>&nbsp; 约75%，25%发票异常<br>
-          <strong>近期趋势</strong>&nbsp; 收入断崖式下跌（-95%）
-        </div>
-        <div class="case-verdict">
-          <strong>银行原评级：A</strong><br>
-          模型给出C级：该企业虽有一定规模，但呈现出多重预警信号——剧烈波动+成本失控+发票异常+收入暴跌。银行可能基于历史关系给了过高评级。建议：<strong>中等额度，偏高利率，密切监控</strong>。
-        </div>
-      </div>
-
-      <!-- E115: Worst, defaulted -->
-      <div class="case-card">
-        <div class="case-header">
-          <span class="case-id">E115</span>
-          <span class="case-grade grade-d">模型D级 · 已违约</span>
-        </div>
-        <div class="case-score d">0.139</div>
-        <div class="case-metrics">
-          <strong>收入规模</strong>&nbsp; 极低（<百万级），微型企业<br>
-          <strong>利润</strong>&nbsp; 持续亏损，入不敷出<br>
-          <strong>利润率</strong>&nbsp; -100%，完全无盈利能力<br>
-          <strong>收入波动</strong>&nbsp; 高（>1.5倍标准差）<br>
-          <strong>作废率</strong>&nbsp; >15%，发票规范性差<br>
-          <strong>增长趋势</strong>&nbsp; 持续下滑
-        </div>
-        <div class="case-verdict">
-          <strong>实际状态：已违约</strong><br>
-          模型给出D级：企业几乎在所有维度都处于最差水平。模型成功识别了这一全面恶化的企业，建议：<strong>不予放贷</strong>。
-        </div>
-      </div>
-    </div>
-
-    <div class="info-panel">
-      <h3>三个案例的同一条启示</h3>
-      <p>模型评分不是简单的"规模排序"。E64虽然收入绝对规模远大于很多A级企业，但<span class="hl">多重风险信号叠加</span>（波动、低效、下滑）使其综合评分低于一些更小但更稳健的企业。这正是一个好的风控模型应有的特征——<span class="hl">不被表面规模迷惑，而是深入识别结构性风险</span>。</p>
-    </div>
-  </section>
-
-  <!-- ====== RISK ASSESSMENT ====== -->
-  <section class="section" id="risk">
-    <div class="section-eyebrow">风险评估体系</div>
-    <div class="section-title">从发票数据到信用评分</div>
-    <div class="section-desc">15个指标 → AHP(60%)+熵权(40%)组合赋权 → TOPSIS综合评分。违约率随风险等级严格单调递增，验证了模型的序数有效性。</div>
-
-    <div class="chart-row col2" style="margin-top:28px">
-      <div class="chart-box"><h3>TOPSIS得分排名（Top 20，附件1）</h3><div class="chart-inner h400" id="c_ranking"></div></div>
-      <div class="chart-box"><h3>核心验证：风险等级 vs 违约率</h3><div class="chart-inner h400" id="c_default"></div></div>
-    </div>
-
-    <div class="chart-row col3" style="margin-top:22px">
-      <div class="chart-box"><h3>附件1等级分布（123家）</h3><div class="chart-inner h300" id="c_pie1"></div></div>
-      <div class="chart-box"><h3>附件2等级分布（302家）</h3><div class="chart-inner h300" id="c_pie2"></div></div>
-      <div class="chart-box"><h3>模型 vs 银行评级一致性</h3><div class="chart-inner h300" id="c_heat"></div></div>
-    </div>
-
-    <div class="info-panel">
-      <h3>模型选择逻辑</h3>
-      <p>
-        <span class="hl">为什么不用纯客观赋权？</span> 收入环比增长率的原始熵权高达0.388，若完全信任数据，这一个指标就将主导整个模型——但它受季节性影响极大，并非最可靠的信用信号。AHP通过专家经验将其压制到0.184。
-        <span class="hl">为什么是TOPSIS而非灰色关联？</span> TOPSIS利用欧氏距离的非线性性质，对异常值有自然的"拉近"效应；GRA在样本量大时区分度不足。
-        <span class="hl">为什么α=0.6？</span> 经过0.3到0.7的网格搜索，α=0.6时违约企业与正常企业的TOPSIS均值差最大（0.052）。
-      </p>
-    </div>
-  </section>
-
-  <!-- ====== STRATEGY ====== -->
-  <section class="section" id="strategy">
-    <div class="section-eyebrow">信贷策略</div>
-    <div class="section-title">差异化额度与利率分配</div>
-    <div class="section-desc">D级不放贷；A/B/C级按TOPSIS得分比例分配额度（10–100万），按风险等级+得分微调梯级定价。</div>
-
-    <div class="chart-row col2" style="margin-top:28px">
-      <div class="chart-box"><h3>利率-流失率关系（附件3拟合，R²>0.99）</h3><div class="chart-inner h400" id="c_rate"></div></div>
-      <div class="chart-box"><h3>两种场景信贷策略对比</h3>
-        <table class="data-table">
-          <thead><tr><th>指标</th><th>问题1（123家·8000万）</th><th>问题2（302家·1亿）</th></tr></thead>
-          <tbody>
-            <tr><td>放贷企业</td><td>98家（79.7%）</td><td>241家（79.8%）</td></tr>
-            <tr><td>D级不放贷</td><td>25家</td><td>61家</td></tr>
-            <tr><td>额度范围</td><td>64–100万</td><td>31–100万</td></tr>
-            <tr><td>中位数</td><td>81万</td><td>37万</td></tr>
-            <tr><td>A级利率</td><td>4.60%</td><td>4.68%</td></tr>
-            <tr><td>B级利率</td><td>7.38%</td><td>7.43%</td></tr>
-            <tr><td>C级利率</td><td>10.96%</td><td>10.97%</td></tr>
-            <tr><td>利息收入</td><td>≈570万/年</td><td>≈790万/年</td></tr>
-            <tr><td>预算利用率</td><td><span class="tag tag-a">100%</span></td><td><span class="tag tag-a">100%</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ====== COVID ====== -->
-  <section class="section" id="covid">
-    <div class="section-eyebrow">突发因素</div>
-    <div class="section-title">新冠疫情冲击下的信贷调整</div>
-    <div class="section-desc">基于清华-北大995家中小企业调研数据量化行业冲击系数，83家企业风险等级在调整后发生变化。</div>
-
-    <div class="chart-row col2" style="margin-top:28px">
-      <div class="chart-box"><h3>各行业调整前后平均贷款额度</h3><div class="chart-inner h400" id="c_covid"></div></div>
-      <div class="chart-box"><h3>风险等级调整流向（桑基图）</h3><div class="chart-inner h400" id="c_flow"></div></div>
-    </div>
-
-    <div class="info-panel">
-      <h3>冲击系数设定依据</h3>
-      <p>
-        <span class="hl">严重负面（S=1.30）</span>：旅游/餐饮/酒店业春节损失超5000亿元，85%企业现金不足3个月，违约概率预估上升30%<br>
-        <span class="hl">中度负面（S=1.15）</span>：制造/建筑/零售业受供应链+消费双重冲击，58%企业营收降幅>50%，违约概率预估上升15%<br>
-        <span class="hl">正面/轻影响（S=0.90）</span>：医疗/科技/电商需求增长，违约概率预估下降10%<br>
-        数据来源：清华-北大联合调研(2020.2)、中国银行业协会报告(2020.4)、《清华金融评论》2020年第6期。
-      </p>
-    </div>
-  </section>
-
-  <!-- ====== SENSITIVITY ====== -->
-  <section class="section">
-    <div class="section-eyebrow">可靠性</div>
-    <div class="section-title">模型稳健性检验</div>
-    <div class="chart-row col2" style="margin-top:28px">
-      <div class="chart-box"><h3>权重扰动100次（±10%）— Spearman ρ=0.965</h3><div class="chart-inner h400" id="c_sens"></div></div>
-      <div class="chart-box"><h3>指标权重分布（AHP 60% + 熵权 40%）</h3><div class="chart-inner h400" id="c_weights"></div></div>
-    </div>
-  </section>
-
-</div>
-
-<footer>
-  <p>中小微企业信贷决策模型 · 2020数学建模国赛C题 · 作者：冯浩然</p>
-  <p style="margin-top:4px"><a href="https://github.com/wanbro333/evalution_model_test">github.com/wanbro333/evalution_model_test</a></p>
-</footer>
-
-<script>
-const C = { navy:'#16213e', teal:'#0d7377', gold:'#c9a93e', green:'#1b7a3d', blue:'#2874a6', orange:'#e67e22', red:'#c0392b', gray:'#9ca3af' };
-const G = { a:C.green, b:C.blue, c:C.orange, d:C.red };
-
-function chart(id) {
-  const c = echarts.init(document.getElementById(id));
-  window.addEventListener('resize',()=>c.resize());
-  return c;
-}
-
-// Ranking bar
-(function(){
-  const firms = ['E38','E40','E46','E6','E28','E32','E24','E12','E16','E4','E60','E89','E103','E23','E61','E21','E2','E1','E120','E3'];
-  const scores = [0.848,0.783,0.760,0.758,0.743,0.740,0.661,0.638,0.627,0.626,0.503,0.477,0.413,0.412,0.409,0.407,0.405,0.404,0.291,0.290];
-  const grades = ['A','A','A','A','A','A','A','A','A','A','A','A','A','A','A','A','A','A','B','B'];
-  chart('c_ranking').setOption({
-    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
-    grid:{left:55,right:25,top:10,bottom:30},
-    xAxis:{type:'value',name:'TOPSIS得分',max:1},
-    yAxis:{type:'category',data:firms.slice().reverse(),inverse:true,axisLabel:{fontSize:11}},
-    series:[{type:'bar',data:scores.slice().reverse().map((v,i)=>({value:v,itemStyle:{color:G[grades.slice().reverse()[i].toLowerCase()],borderRadius:[0,4,4,0]}})),barMaxWidth:22}]
-  });
-})();
-
-// Default rate monotonicity
-chart('c_default').setOption({
-  tooltip:{trigger:'axis'},
-  grid:{left:60,right:30,top:20,bottom:40},
-  legend:{data:['企业数','违约率'],bottom:0},
-  xAxis:{type:'category',data:['A级','B级','C级','D级']},
-  yAxis:[{type:'value',name:'企业数'},{type:'value',name:'违约率',axisLabel:{formatter:'{value}%'},max:70}],
-  series:[
-    {name:'企业数',type:'bar',data:[30,31,37,25],itemStyle:{color:'#e5e7eb',borderRadius:[4,4,0,0]},barWidth:40,barGap:'30%'},
-    {name:'违约率',type:'line',yAxisIndex:1,data:[10,12.9,16.2,56],lineStyle:{color:C.red,width:3},itemStyle:{color:C.red},symbolSize:10,
-     markLine:{silent:true,symbol:'none',data:[{yAxis:10,label:{formatter:'A级基准10%'}},{yAxis:56,label:{formatter:'D级56%'}}],lineStyle:{type:'dashed',color:'#aaa'}}}
-  ]
-});
-
-// Pie charts
-[{id:'c_pie1',data:[{v:28,n:'A级',c:C.green},{v:32,n:'B级',c:C.blue},{v:38,n:'C级',c:C.orange},{v:25,n:'D级',c:C.red}]},
- {id:'c_pie2',data:[{v:75,n:'A级',c:C.green},{v:76,n:'B级',c:C.blue},{v:90,n:'C级',c:C.orange},{v:61,n:'D级',c:C.red}]}]
-.forEach(cfg=>chart(cfg.id).setOption({
-  tooltip:{trigger:'item',formatter:'{b}: {c}家 ({d}%)'},
-  series:[{type:'pie',radius:['50%','72%'],data:cfg.data.map(d=>({value:d.v,name:d.n,itemStyle:{color:d.c}})),label:{fontSize:12}}]
-}));
-
-// Heatmap: model vs bank
-chart('c_heat').setOption({
-  tooltip:{trigger:'item',formatter:p=>`银行${['A','B','C','D'][p.value[1]]} → 模型${['A','B','C','D'][p.value[0]]}: ${p.value[2]}家`},
-  grid:{left:70,right:40,top:20,bottom:40},
-  xAxis:{type:'category',data:['模型A','模型B','模型C','模型D'],position:'top',axisLabel:{fontSize:11}},
-  yAxis:{type:'category',data:['银行D','银行C','银行B','银行A'],inverse:true,axisLabel:{fontSize:11}},
-  visualMap:{min:0,max:17,orient:'vertical',right:0,top:30,inRange:{color:['#f8f7f4','#c8e6c9','#66bb6a','#2e7d32']},show:false},
-  series:[{type:'heatmap',data:[[0,0,10],[1,0,11],[2,0,6],[3,0,0],[0,1,9],[1,1,9],[2,1,17],[3,1,3],[0,2,8],[1,2,8],[2,2,9],[3,2,9],[0,3,1],[1,3,4],[2,3,6],[3,3,13]],label:{show:true,fontSize:13,fontWeight:700}}]
-});
-
-// Rate-churn curve
-chart('c_rate').setOption((()=>{
-  const rs=[],a=[],b=[],c=[];
-  for(let r=4;r<=15;r+=0.1){rs.push(r);a.push(Math.max(0,Math.min(100,(-76.41*(r/100)**2+21.98*(r/100)-0.697)*100)));b.push(Math.max(0,Math.min(100,(-67.93*(r/100)**2+20.21*(r/100)-0.65)*100)));c.push(Math.max(0,Math.min(100,(-63.94*(r/100)**2+19.57*(r/100)-0.639)*100)));}
-  return {
-    tooltip:{trigger:'axis'},
-    legend:{data:['A级(R²=0.993)','B级(R²=0.995)','C级(R²=0.995)'],bottom:0},
-    grid:{left:55,right:25,top:15,bottom:45},
-    xAxis:{type:'value',name:'贷款年利率(%)',min:4,max:15,axisLabel:{formatter:'{value}%'}},
-    yAxis:{type:'value',name:'客户流失率(%)',axisLabel:{formatter:'{value}%'}},
-    series:[
-      {name:'A级(R²=0.993)',type:'line',data:rs.map((r,i)=>[r,a[i]]),smooth:true,lineStyle:{color:C.green,width:2.5},showSymbol:false},
-      {name:'B级(R²=0.995)',type:'line',data:rs.map((r,i)=>[r,b[i]]),smooth:true,lineStyle:{color:C.blue,width:2.5},showSymbol:false},
-      {name:'C级(R²=0.995)',type:'line',data:rs.map((r,i)=>[r,c[i]]),smooth:true,lineStyle:{color:C.orange,width:2.5},showSymbol:false}
-    ]
-  };
-})());
-
-// COVID comparison
-chart('c_covid').setOption({
-  tooltip:{trigger:'axis'},
-  legend:{data:['调整前','调整后'],bottom:0},
-  grid:{left:60,right:25,top:20,bottom:45},
-  xAxis:{type:'category',data:['严重负面\n(3家)','中度负面\n(69家)','其他\n(187家)','正面/轻影响\n(43家)'],axisLabel:{fontSize:10}},
-  yAxis:{type:'value',name:'平均贷款额度(万元)'},
-  series:[
-    {name:'调整前',type:'bar',data:[40.1,35.7,42.0,30.7],itemStyle:{color:'#d1d5db',borderRadius:[4,4,0,0]},barWidth:28,barGap:'25%'},
-    {name:'调整后',type:'bar',data:[22.4,21.9,38.7,37.5],itemStyle:{color:C.teal,borderRadius:[4,4,0,0]},barWidth:28}
-  ]
-});
-
-// Sankey flow
-chart('c_flow').setOption({
-  tooltip:{trigger:'item',triggerOn:'mousemove'},
-  series:[{type:'sankey',layout:'none',emphasis:{focus:'adjacency'},nodeAlign:'left',
-    data:[{name:'A（前）'},{name:'B（前）'},{name:'C（前）'},{name:'D（前）'},{name:'A（后）'},{name:'B（后）'},{name:'C（后）'},{name:'D（后）'}],
-    links:[
-      {source:'A（前）',target:'A（后）',value:52},{source:'A（前）',target:'B（后）',value:18},{source:'A（前）',target:'C（后）',value:5},
-      {source:'B（前）',target:'A（后）',value:23},{source:'B（前）',target:'B（后）',value:42},{source:'B（前）',target:'C（后）',value:11},
-      {source:'C（前）',target:'B（后）',value:16},{source:'C（前）',target:'C（后）',value:58},{source:'C（前）',target:'D（后）',value:16},
-      {source:'D（前）',target:'C（后）',value:15},{source:'D（前）',target:'D（后）',value:46}
-    ],
-    lineStyle:{color:'gradient',curveness:0.5}
-  }]
-});
-
-// Sensitivity
-chart('c_sens').setOption((()=>{
-  const d=Array.from({length:100},()=>0.96+(Math.random()-0.5)*0.025);
-  return {
-    tooltip:{trigger:'axis'},
-    grid:{left:65,right:25,top:20,bottom:30},
-    xAxis:{type:'category',data:Array.from({length:100},(_,i)=>i%10===0?i+1:''),name:'扰动试验'},
-    yAxis:{type:'value',name:'Spearman ρ',min:0.91,max:1.0},
-    series:[{type:'line',data:d,showSymbol:false,lineStyle:{color:C.teal,width:1.5},
-      areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(13,115,119,0.12)'},{offset:1,color:'rgba(13,115,119,0.01)'}])},
-      markLine:{silent:true,symbol:'none',data:[
-        {yAxis:0.85,label:{formatter:'稳健性阈值 0.85'},lineStyle:{type:'dashed',color:C.orange}},
-        {yAxis:0.965,label:{formatter:'均值 0.965'},lineStyle:{type:'dashed',color:C.green}}
-      ]}
-    }]
-  };
-})());
-
-// Weights
-chart('c_weights').setOption((()=>{
-  const L=['销项总金额','进项总金额','利润率','利润','销项客户数','进项供应商数','交易网络广度','收入波动率','成本波动率','销项有效率','进项有效率','销项作废率','进项作废率','收入环比增长率','综合活跃月数'];
-  const V=[0.064,0.061,0.058,0.055,0.077,0.067,0.065,0.059,0.060,0.052,0.052,0.049,0.051,0.184,0.046];
-  return {
-    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
-    grid:{left:115,right:30,top:10,bottom:20},
-    xAxis:{type:'value',name:'组合权重'},
-    yAxis:{type:'category',data:L.slice().reverse(),inverse:true,axisLabel:{fontSize:10}},
-    series:[{type:'bar',data:V.slice().reverse().map(v=>({value:v,itemStyle:{color:v>0.10?C.gold:C.teal,borderRadius:[0,3,3,0]}})),barMaxWidth:16}]
-  };
-})());
-</script>
-</body>
-</html>
+<section id="assumptions"><div class="section-head"><h2>参数、假设与结果文件</h2><p>以下参数可以在配置文件中替换。修改后应重新运行完整流水线，而不是只改论文或网页数字。</p></div>
+<div class="table-scroll"><table><thead><tr><th>参数</th><th>当前值</th><th>性质</th></tr></thead><tbody>
+<tr><th scope="row">问题1预算</th><td>8000万元</td><td>可配置情景</td></tr><tr><th scope="row">问题2和3预算</th><td>10000万元</td><td>题目约束</td></tr><tr><th scope="row">LGD</th><td>60.0%</td><td>业务假设</td></tr><tr><th scope="row">资金成本</th><td>2.5%</td><td>业务假设</td></tr><tr><th scope="row">单户额度</th><td>10-100万元</td><td>题目约束</td></tr>
+</tbody></table></div>
+<div class="downloads"><a class="download" href="output/信贷决策建模结果.xlsx"><b>完整结果Excel</b><span>评分、策略、公式和灵敏度明细</span></a><a class="download" href="paper/paper.pdf"><b>建模论文PDF</b><span>完整推导与结果解释</span></a><a class="download" href="output/report_metrics.json"><b>统一指标JSON</b><span>论文和网页共同的数据源</span></a></div></section>
+</main><footer>本页由同一次端到端运行生成。数据、图表、Excel和论文共享统一指标源。</footer></body></html>

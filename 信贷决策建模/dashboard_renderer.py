@@ -1,0 +1,149 @@
+"""生成面向初学者和评委的离线论文伴读页面。"""
+from __future__ import annotations
+
+from html import escape
+
+from config import MODEL_DIR
+
+
+def _grade_rows(metrics):
+    rows = []
+    for item in metrics['validation']['grade_table']:
+        rows.append(
+            f"<tr><th scope='row'>{escape(item['风险等级'])}级</th>"
+            f"<td>{item['企业数']}</td><td>{item['违约数']}</td>"
+            f"<td>{item['实际违约率'] * 100:.1f}%</td>"
+            f"<td>{item['平均预测PD'] * 100:.1f}%</td></tr>"
+        )
+    return ''.join(rows)
+
+
+def _industry_rows(metrics):
+    rows = []
+    for item in metrics['industry_summary']:
+        rows.append(
+            f"<tr><th scope='row'>{escape(str(item['行业类别']))}</th>"
+            f"<td>{int(item['企业数'])}</td>"
+            f"<td>{item['调整前平均额度']:.1f}</td>"
+            f"<td>{item['调整后平均额度']:.1f}</td>"
+            f"<td>{item['调整前平均PD'] * 100:.1f}%</td>"
+            f"<td>{item['调整后平均PD'] * 100:.1f}%</td></tr>"
+        )
+    return ''.join(rows)
+
+
+def _strategy_rows(metrics):
+    rows = []
+    for label, key in [('问题1', 'strategy1'), ('问题2', 'strategy2'), ('问题3', 'strategy3')]:
+        item = metrics[key]
+        rows.append(
+            f"<tr><th scope='row'>{label}</th><td>{item['loan_count']}</td>"
+            f"<td>{item['total_amount']:.0f}</td><td>{item['average_rate'] * 100:.2f}%</td>"
+            f"<td>{item['retained_interest']:.2f}</td><td>{item['expected_default_loss']:.2f}</td>"
+            f"<td>{item['expected_funding_cost']:.2f}</td>"
+            f"<td class='strong'>{item['expected_net_profit']:.2f}</td></tr>"
+        )
+    return ''.join(rows)
+
+
+def write_dashboard(metrics, path=MODEL_DIR / 'dashboard.html'):
+    validation = metrics['validation']
+    data = metrics['data_summary']
+    assumptions = metrics['assumptions']
+    sensitivity = metrics['sensitivity']
+    s1, s2, s3 = metrics['strategy1'], metrics['strategy2'], metrics['strategy3']
+    invoice1 = data['attachment1_input_invoices'] + data['attachment1_output_invoices']
+    invoice2 = data['attachment2_input_invoices'] + data['attachment2_output_invoices']
+    default_count = sum(item['违约数'] for item in validation['grade_table'])
+
+    html = f'''<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="中小微企业信贷决策模型的离线论文伴读与结果展示">
+<title>中小微企业信贷决策模型伴读</title>
+<style>
+:root{{--bg:#f3f6f6;--paper:#fff;--ink:#12212f;--muted:#5f7079;--line:#d7e0e3;--navy:#17324d;--accent:#0f766e;--soft:#e9f3f2;--radius:12px;--mono:Consolas,"SFMono-Regular",monospace}}
+*{{box-sizing:border-box}}html{{scroll-behavior:smooth;scroll-padding-top:76px;overflow-x:clip}}body{{margin:0;min-width:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;line-height:1.72}}
+a{{color:var(--accent)}}a:focus-visible,summary:focus-visible{{outline:3px solid #79b8b1;outline-offset:3px}}
+.topbar{{position:sticky;top:0;z-index:10;height:68px;background:var(--navy);color:#f5f8f8;border-bottom:1px solid #2e4c63}}
+.nav{{max-width:1240px;min-width:0;height:100%;margin:auto;padding:0 24px;display:flex;align-items:center;gap:28px}}.brand{{flex:0 0 auto;font-weight:700;white-space:nowrap}}.navlinks{{min-width:0;flex:1;margin-left:auto;display:flex;justify-content:flex-end;gap:20px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}}.navlinks a{{flex:0 0 auto;color:#cbd7dd;text-decoration:none;font-size:13px}}.navlinks a:hover{{color:#fff}}
+main{{max-width:1240px;min-width:0;margin:auto;padding:0 24px 76px}}.hero{{min-width:0;min-height:520px;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(360px,.88fr);gap:58px;align-items:center;border-bottom:1px solid var(--line)}}.hero>*{{min-width:0}}
+.hero h1{{font-size:clamp(34px,4.5vw,58px);line-height:1.12;letter-spacing:-1.6px;margin:0 0 20px;max-width:12ch}}.hero p{{font-size:17px;color:var(--muted);max-width:54ch;margin:0}}
+.journey{{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:24px}}.journey h2{{font-size:15px;margin:0 0 15px}}.journey ol{{list-style:none;padding:0;margin:0;counter-reset:item}}.journey li{{counter-increment:item;display:grid;grid-template-columns:34px 1fr;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}}.journey li:last-child{{border-bottom:0}}.journey li:before{{content:counter(item);font:700 13px/28px var(--mono);width:28px;height:28px;text-align:center;border:1px solid var(--accent);border-radius:50%;color:var(--accent)}}.journey b{{display:block;font-size:14px}}.journey span{{display:block;font-size:12px;color:var(--muted)}}
+.metrics{{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}}.metric{{padding:25px 18px 25px 0;border-right:1px solid var(--line)}}.metric:not(:first-child){{padding-left:22px}}.metric:last-child{{border-right:0}}.metric b{{display:block;color:var(--accent);font:700 31px/1.1 var(--mono)}}.metric span{{font-size:12px;color:var(--muted)}}
+section{{padding:58px 0;border-bottom:1px solid var(--line)}}.section-head{{margin-bottom:26px}}.section-head h2{{font-size:28px;line-height:1.25;margin:0 0 9px;color:var(--navy)}}.section-head p{{margin:0;max-width:68ch;color:var(--muted)}}
+.with-aside{{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:34px;align-items:start}}.aside{{position:sticky;top:92px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:18px}}.aside h3{{font-size:14px;margin:0 0 10px}}.aside p,.aside li{{font-size:12px;color:var(--muted)}}.aside ul{{margin:0;padding-left:18px}}
+.grid2{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start}}.grid-wide{{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:start}}
+figure{{margin:0;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:14px}}figure img{{display:block;width:100%;height:auto}}figcaption{{font-size:12px;color:var(--muted);margin-top:8px}}
+.note{{margin:18px 0;padding:14px 16px;border-left:3px solid var(--accent);background:var(--soft);font-size:14px}}.note b{{color:var(--navy)}}
+.formula{{margin:16px 0;padding:17px 20px;background:var(--navy);color:#f4f8f8;border-radius:var(--radius);font:600 15px/1.7 var(--mono);overflow-x:auto}}.formula small{{display:block;color:#bed0d7;font:12px/1.6 "Microsoft YaHei",sans-serif}}
+.concepts{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px}}.concepts article{{padding:17px 0;border-top:1px solid var(--line)}}.concepts h3{{font-size:15px;margin:0 0 5px}}.concepts p{{font-size:13px;color:var(--muted);margin:0}}
+.table-scroll{{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper)}}table{{width:100%;border-collapse:collapse;min-width:620px;font-size:13px}}th,td{{padding:11px 13px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}}th:first-child,td:first-child{{text-align:left}}thead th{{background:#eaf0f1;color:#344d5a;font-weight:700}}tbody tr:last-child th,tbody tr:last-child td{{border-bottom:0}}.strong{{color:var(--accent);font-weight:700}}
+details{{margin-top:14px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:0 16px}}summary{{cursor:pointer;padding:13px 0;color:var(--navy);font-weight:700}}details p,details ul{{font-size:13px;color:var(--muted)}}
+.downloads{{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px}}.download{{display:block;padding:18px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);text-decoration:none;color:var(--ink)}}.download:hover{{border-color:var(--accent);transform:translateY(-1px)}}.download b{{display:block;color:var(--navy)}}.download span{{font-size:12px;color:var(--muted)}}
+footer{{max-width:1240px;margin:auto;padding:26px 24px 42px;color:var(--muted);font-size:12px}}
+@media(max-width:900px){{.hero{{grid-template-columns:1fr;gap:28px;padding:54px 0;min-height:auto}}.hero h1{{max-width:none}}.with-aside,.grid-wide{{grid-template-columns:1fr}}.aside{{position:static}}.metrics{{grid-template-columns:1fr 1fr}}.metric:nth-child(2){{border-right:0}}.downloads{{grid-template-columns:1fr}}}}
+@media(max-width:640px){{html{{scroll-padding-top:112px}}.topbar{{height:104px}}.nav{{height:100%;padding:12px 16px 9px;flex-direction:column;align-items:flex-start;justify-content:center;gap:9px}}.brand{{font-size:14px;line-height:1.2}}.navlinks{{width:100%;flex:0 0 auto;margin:0;justify-content:flex-start;gap:18px;padding-bottom:2px}}main{{width:100%;padding-left:16px;padding-right:16px}}.hero h1{{max-width:100%;font-size:clamp(31px,9.2vw,36px);letter-spacing:-.8px;overflow-wrap:anywhere;word-break:break-all}}.metrics{{grid-template-columns:1fr}}.metric,.metric:not(:first-child){{padding:18px 0;border-right:0;border-bottom:1px solid var(--line)}}.concepts,.grid2{{grid-template-columns:1fr}}section{{padding:44px 0}}}}
+@media(prefers-reduced-motion:reduce){{html{{scroll-behavior:auto}}*{{transition:none!important}}}}
+@media print{{.topbar,.aside{{display:none}}body{{background:#fff}}main{{max-width:none;padding:0}}section{{break-inside:avoid}}a{{color:#000;text-decoration:none}}}}
+</style></head><body>
+<header class="topbar"><nav class="nav" aria-label="主导航"><div class="brand">中小微企业信贷决策</div><div class="navlinks"><a href="#model">模型全景</a><a href="#data">数据处理</a><a href="#validation">风险预测</a><a href="#pricing">利率定价</a><a href="#strategy">额度策略</a><a href="#sensitivity">模型可靠性</a></div></nav></header>
+<main>
+<section class="hero" id="model"><div><h1>从一张发票，<br>到一笔可解释的贷款</h1><p>沿着数据处理、违约预测、利率定价和额度优化，理解银行如何把历史交易转化为可执行的信贷策略。</p></div>
+<div class="journey"><h2>模型旅程</h2><ol>
+<li><div><b>整理票据</b><span>保留红冲符号，补齐无交易月份</span></div></li>
+<li><div><b>估计PD</b><span>用真实违约标签学习风险概率</span></div></li>
+<li><div><b>选择利率</b><span>权衡利息增加与客户流失</span></div></li>
+<li><div><b>配置额度</b><span>在预算和禁贷约束下求最优组合</span></div></li>
+<li><div><b>压力重算</b><span>疫情冲击后重新评级、定价和分配</span></div></li>
+</ol></div></section>
+
+<div class="metrics" aria-label="核心验证指标"><div class="metric"><b>{validation['roc_auc']:.3f}</b><span>样本外 ROC-AUC</span></div><div class="metric"><b>{validation['pr_auc']:.3f}</b><span>样本外 PR-AUC</span></div><div class="metric"><b>{validation['brier']:.3f}</b><span>Brier 分数，越低越好</span></div><div class="metric"><b>{metrics['original_d_loan_count']}</b><span>原始D级获贷企业数</span></div></div>
+
+<section id="data"><div class="section-head"><h2>数据先要算对，模型才有意义</h2><p>发票记录很多，但监督样本只有123家。数据处理的重点不是堆指标，而是保留退货、作废和经营断档的真实经济含义。</p></div>
+<div class="with-aside"><div><div class="grid-wide"><figure><img src="output/charts/fig_data_scale.png" alt="附件1和附件2进销项发票数量"><figcaption>附件1共{invoice1:,}条发票，附件2共{invoice2:,}条发票</figcaption></figure><div>
+<div class="note"><b>红冲示例</b><br>先开100万元发票，再发生20万元退货，真实净额是80万元。若把负数取绝对值，就会错误得到120万元。</div>
+<div class="formula">年化收入 = 12 × 观察期销项净额 / 观察月数<small>无交易月份补0，因此活跃比例和波动率不会被虚假美化。</small></div></div></div>
+<div class="concepts"><article><h3>规模与盈利</h3><p>年化收入、年化利润、利润率、客户数和供应商数。</p></article><article><h3>稳定与趋势</h3><p>收入和成本波动、收入趋势，识别剧烈变化与持续收缩。</p></article><article><h3>经营连续性</h3><p>活跃月份比例和最近断档月数，区分持续经营与偶发交易。</p></article><article><h3>票据行为</h3><p>进销项作废、负数发票和负数金额比例。</p></article></div></div>
+<aside class="aside"><h3>本节要点</h3><ul><li>只有有效发票进入净额。</li><li>负数有效票据冲减收入或成本。</li><li>作废票不计金额，但保留作废率。</li><li>附件2沿用附件1的处理参数。</li></ul></aside></div></section>
+
+<section id="validation"><div class="section-head"><h2>风险预测：让历史违约标签说话</h2><p>逻辑回归输出一年期违约概率PD。所有效果指标来自重复嵌套样本外预测，不用训练内成绩证明自己。</p></div>
+<div class="with-aside"><div><div class="formula">PD = 1 / (1 + exp(-z))<small>z由16项标准化经营特征加权得到，L2正则抑制小样本过拟合。</small></div>
+<div class="grid2"><figure><img src="output/charts/fig_default_rate.png" alt="不同PD等级的企业数和实际违约率"><figcaption>固定PD档位的实际违约率逐级上升</figcaption></figure><figure><img src="output/charts/fig_pd_distribution.png" alt="附件1和附件2的预测PD分布"><figcaption>附件2使用附件1训练得到的同一风险尺度</figcaption></figure></div>
+<div class="table-scroll"><table><thead><tr><th>等级</th><th>企业数</th><th>违约数</th><th>实际违约率</th><th>平均PD</th></tr></thead><tbody>{_grade_rows(metrics)}</tbody></table></div>
+<details><summary>ROC-AUC、PR-AUC和Brier分别是什么意思？</summary><ul><li>ROC-AUC衡量模型把违约企业排在高风险位置的能力。</li><li>PR-AUC更关注少数违约样本能否在高风险名单中被找出。</li><li>Brier是预测概率与真实0/1结果的平均平方误差，越低越好。</li></ul></details>
+</div><aside class="aside"><h3>为什么要嵌套交叉验证</h3><p>内层选择正则强度，外层评价完整建模流程。测试企业从未参与预处理、参数选择和训练，因此结果比训练内准确率更可信。</p><p><b>{default_count}家</b>已知违约企业构成监督信号。</p></aside></div></section>
+
+<section id="topsis"><div class="section-head"><h2>TOPSIS负责解释经营质量，不冒充PD</h2><p>PD回答会不会违约，TOPSIS回答企业离理想经营状态有多近。两者互补，但用途不同。</p></div><div class="grid-wide"><figure><img src="output/charts/fig_ranking.png" alt="附件1低风险企业排名"><figcaption>低PD企业的风险排序</figcaption></figure><div><div class="formula">TOPSIS得分 = 到负理想点距离 / 两个理想点距离之和<small>附件2沿用附件1的截尾边界、缩放尺度、权重和理想点。</small></div><div class="note"><b>为什么固定尺度</b><br>如果附件2重新归一化，同一家企业会因为比较对象变化而改变得分。固定附件1尺度后，相同经营状态拥有相同解释。</div></div></div></section>
+
+<section id="pricing"><div class="section-head"><h2>利率越高，银行不一定赚得越多</h2><p>高利率增加单笔利息，也提高客户流失。保序回归先得到随利率非降的流失率，再计算每个利率的期望收益。</p></div>
+<div class="with-aside"><div><div class="grid2"><figure><img src="output/charts/fig_rate_churn.png" alt="A到C级客户的利率与流失率曲线"><figcaption>局部逆序点经PAVA保序回归修复</figcaption></figure><figure><img src="output/charts/fig_profit_breakdown.png" alt="三问信贷策略的期望收益构成"><figcaption>净收益由留存后利息扣除违约损失和资金成本</figcaption></figure></div>
+<div class="formula">单位收益 = 留存率 × [(1 - PD) × 利率 - PD × LGD - 资金成本]<small>模型只在附件3真实出现的利率网格内选择，不做区间外外推。</small></div>
+<details><summary>用100万元贷款做一个简单计算</summary><p>若PD为8%，利率10%，流失率20%，LGD为60%，资金成本为2.5%，则单位额度期望收益为1.52%，100万元名义授信的期望净收益约1.52万元。</p></details></div>
+<aside class="aside"><h3>最容易忽略的两点</h3><ul><li>流失客户没有实际放款，也没有利息和资金成本。</li><li>高风险企业提高利率后，违约损失可能仍大于利息。</li></ul></aside></div></section>
+
+<section id="strategy"><div class="section-head"><h2>额度分配：从单户最优到全行最优</h2><p>MILP把每家企业的单位收益放进同一个预算池，同时执行D级禁贷、单户上下限和总预算约束。</p></div>
+<div class="formula">最大化 Σ(单位期望收益 × 授信额度)<small>约束：总额度等于预算；单户额度为0或10-100万元；原始D级和预测D级额度为0。</small></div>
+<div class="table-scroll"><table><thead><tr><th>方案</th><th>放贷企业</th><th>额度合计</th><th>平均利率</th><th>留存后利息</th><th>违约损失</th><th>资金成本</th><th>期望净收益</th></tr></thead><tbody>{_strategy_rows(metrics)}</tbody></table></div>
+<div class="note"><b>为什么很多入选企业都是100万元？</b><br>当前目标对额度是线性的，题目又只给统一上限，所以模型会优先把额度投向单位收益最高的企业并触及上限。若要更分散，需要增加企业需求或行业集中度约束。</div></section>
+
+<section id="emergency"><div class="section-head"><h2>疫情冲击后，完整重算而不是简单打折</h2><p>行业冲击乘到违约赔率上，得到新PD后重新评级、重新选择利率并重新分配额度。共有{metrics['emergency_grade_changes']}家企业跨越等级阈值。</p></div>
+<div class="grid2"><figure><img src="output/charts/fig_covid.png" alt="疫情冲击前后行业平均授信额度"><figcaption>行业平均额度的真实重优化结果</figcaption></figure><div class="table-scroll"><table><thead><tr><th>行业类别</th><th>企业数</th><th>原额度</th><th>新额度</th><th>原PD</th><th>新PD</th></tr></thead><tbody>{_industry_rows(metrics)}</tbody></table></div></div>
+<details><summary>为什么调整赔率，而不是直接乘概率？</summary><p>赔率没有1的上界，乘以冲击系数后再还原为概率，可以保证新PD始终位于0和1之间。脱敏名称无法识别行业的企业标为未知，不强行分类。</p></details></section>
+
+<section id="sensitivity"><div class="section-head"><h2>模型可靠吗：稳定不等于没有局限</h2><p>100次权重扰动都真实重算TOPSIS得分和排名。排名稳定说明小幅权重误差影响有限，但不能替代更大样本和跨年度验证。</p></div>
+<div class="with-aside"><div class="grid2"><figure><img src="output/charts/fig_sensitivity.png" alt="100次TOPSIS权重扰动结果"><figcaption>Spearman均值{sensitivity['spearman_mean']:.4f}，最小值{sensitivity['spearman_min']:.4f}</figcaption></figure><figure><img src="output/charts/fig_weights.png" alt="逻辑回归标准化特征系数"><figcaption>系数表示其他变量不变时的风险方向，不代表因果关系</figcaption></figure></div>
+<details open><summary>当前模型的适用边界</summary><ul><li>附件1只有123家企业，需要新增年度数据进行外部验证和概率再校准。</li><li>LGD、资金成本和问题1预算是业务假设，应按银行真实参数重跑。</li><li>行业识别来自脱敏名称，疫情结果是压力测试而非精确因果预测。</li><li>当前未加入企业真实资金需求、行业集中度和组合尾部风险。</li></ul></details></div>
+<aside class="aside"><h3>稳健性摘要</h3><p>Spearman均值 <b>{sensitivity['spearman_mean']:.4f}</b></p><p>Kendall均值 <b>{sensitivity['kendall_mean']:.4f}</b></p><p>影响最大指标 <b>{escape(sensitivity['most_influential_indicator'])}</b></p></aside></div></section>
+
+<section id="assumptions"><div class="section-head"><h2>参数、假设与结果文件</h2><p>以下参数可以在配置文件中替换。修改后应重新运行完整流水线，而不是只改论文或网页数字。</p></div>
+<div class="table-scroll"><table><thead><tr><th>参数</th><th>当前值</th><th>性质</th></tr></thead><tbody>
+<tr><th scope="row">问题1预算</th><td>{assumptions['problem1_budget_wan']:.0f}万元</td><td>可配置情景</td></tr><tr><th scope="row">问题2和3预算</th><td>{assumptions['problem2_budget_wan']:.0f}万元</td><td>题目约束</td></tr><tr><th scope="row">LGD</th><td>{assumptions['lgd'] * 100:.1f}%</td><td>业务假设</td></tr><tr><th scope="row">资金成本</th><td>{assumptions['funding_cost'] * 100:.1f}%</td><td>业务假设</td></tr><tr><th scope="row">单户额度</th><td>{assumptions['loan_min_wan']:.0f}-{assumptions['loan_max_wan']:.0f}万元</td><td>题目约束</td></tr>
+</tbody></table></div>
+<div class="downloads"><a class="download" href="output/信贷决策建模结果.xlsx"><b>完整结果Excel</b><span>评分、策略、公式和灵敏度明细</span></a><a class="download" href="paper/paper.pdf"><b>建模论文PDF</b><span>完整推导与结果解释</span></a><a class="download" href="output/report_metrics.json"><b>统一指标JSON</b><span>论文和网页共同的数据源</span></a></div></section>
+</main><footer>本页由同一次端到端运行生成。数据、图表、Excel和论文共享统一指标源。</footer></body></html>'''
+
+    forbidden = [token for token in ['http://', 'https://', '—', '–'] if token in html]
+    if forbidden:
+        raise AssertionError(f'Dashboard包含禁用内容: {forbidden}')
+    path.write_text(html, encoding='utf-8')
+    return path

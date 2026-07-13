@@ -1,7 +1,7 @@
 """
 公共工具函数 - 评价模型通用工具
 包含：中文字体配置、数据标准化、AHP、熵权法、TOPSIS、GRA、FCE
-参考：D:\shumo\evalution models\数学建模评价类模型建立方法.md
+参考：早期数学建模评价方法笔记（本地资料，未纳入当前仓库）。
 """
 import numpy as np
 import pandas as pd

@@ -12,16 +12,20 @@ import glob
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from pathlib import Path
+from config import DATA_DIR, DB_PATH as CONFIG_DB_PATH, ensure_directories
 
-BASE_DIR = r'D:\shumo\evalation modei test'
-DB_PATH = os.path.join(BASE_DIR, '信贷决策建模', 'credit_data.db')
+BASE_DIR = str(DATA_DIR)
+DB_PATH = str(CONFIG_DB_PATH)
 
 
 def find_file(pattern):
-    """在BASE_DIR中查找匹配pattern的文件，排除临时文件"""
+    """在原始数据目录中查找匹配pattern的文件，排除临时文件。"""
     files = glob.glob(os.path.join(BASE_DIR, pattern))
     files = [f for f in files if '~$' not in f]
-    return files[0] if files else None
+    if not files:
+        raise FileNotFoundError(f"在 {BASE_DIR} 中未找到文件: {pattern}")
+    return files[0]
 
 
 def load_excel_safe(filepath, sheet_name=0):
@@ -137,6 +141,7 @@ def load_all_data():
     print("阶段1：数据加载与SQLite入库")
     print("=" * 60)
 
+    ensure_directories()
     # 创表
     conn = create_database()
 

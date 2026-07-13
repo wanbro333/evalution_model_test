@@ -1,339 +1,235 @@
-"""生成论文用的高质量图表"""
-import os, sys
-sys.path.insert(0, os.path.dirname(__file__))
+"""从真实输出生成论文和Dashboard共用图表。"""
+import os
+import sys
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
-from matplotlib.patches import Patch, FancyBboxPatch
 
-plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei']
-plt.rcParams['axes.unicode_minus'] = False
-plt.rcParams['figure.dpi'] = 200
-plt.rcParams['savefig.dpi'] = 200
-plt.rcParams['savefig.bbox'] = 'tight'
+sys.path.insert(0, os.path.dirname(__file__))
+from config import CHART_DIR, ensure_directories
 
-OUT = os.path.join(os.path.dirname(__file__), 'output', 'charts')
 
-def load_data():
-    out = os.path.join(os.path.dirname(__file__), 'output')
-    s1 = pd.read_csv(os.path.join(out, 'scores_附件1.csv'))
-    s2 = pd.read_csv(os.path.join(out, 'scores_附件2.csv'))
-    f1 = pd.read_csv(os.path.join(out, 'features_附件1.csv'), index_col='企业代号')
-    st2_adj = pd.read_csv(os.path.join(out, 'strategy_附件2_疫情调整.csv'))
-    return s1, s2, f1, st2_adj
+COLORS = {'A': '#0f766e', 'B': '#2563a6', 'C': '#d97706', 'D': '#b42318'}
 
-# ==========================================
-# Figure 1: Default rate monotonicity - THE key validation
-# ==========================================
-def fig_default_rate(s1):
-    fig, ax = plt.subplots(figsize=(7, 4.5))
 
-    grades = ['A级', 'B级', 'C级', 'D级']
-    firms = [30, 31, 37, 25]
-    defaults = [3, 4, 6, 14]
-    rates = [10.0, 12.9, 16.2, 56.0]
-    colors = ['#27ae60', '#2980b9', '#e67e22', '#c0392b']
+def setup_style():
+    plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial Unicode MS', 'DejaVu Sans']
+    plt.rcParams['axes.unicode_minus'] = False
+    plt.rcParams['figure.dpi'] = 140
+    plt.rcParams['axes.spines.top'] = False
+    plt.rcParams['axes.spines.right'] = False
+    plt.rcParams['axes.titleweight'] = 'bold'
 
-    x = np.arange(len(grades))
-    width = 0.35
 
-    # Bar: firm count
-    bars = ax.bar(x - width/2, firms, width, color='#e0e0e0', edgecolor='white', label='企业数量')
-    # Bar: default count
-    bars2 = ax.bar(x - width/2, defaults, width, color=colors, edgecolor='white', alpha=0.9, label='违约数量')
+def save(fig, name):
+    fig.tight_layout()
+    fig.savefig(CHART_DIR / name, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
 
+
+def plot_default_rate(scores1):
+    y = (scores1['是否违约'] == '是').astype(int)
+    data = scores1.assign(_default=y).groupby('风险等级')['_default'].agg(['count', 'sum', 'mean']).reindex(['A', 'B', 'C', 'D']).fillna(0)
+    fig, ax = plt.subplots(figsize=(7.4, 4.6))
+    x = np.arange(4)
+    ax.bar(x, data['count'], color='#d9e2e7', width=0.62, label='企业数')
+    ax.bar(x, data['sum'], color=[COLORS[g] for g in data.index], width=0.62, label='违约数')
+    ax.set_xticks(x, [f'{g}级' for g in data.index])
+    ax.set_ylabel('企业数')
     ax2 = ax.twinx()
-    line = ax2.plot(x + width/2, rates, 'o-', color='#c0392b', linewidth=2.5, markersize=10, label='违约率')
-    ax2.set_ylabel('违约率 (%)', fontsize=12)
-    ax2.set_ylim(0, 70)
+    ax2.plot(x, data['mean'] * 100, color='#8b1e1e', marker='o', linewidth=2.2, label='实际违约率')
+    ax2.set_ylabel('实际违约率 (%)')
+    ax2.set_ylim(0, max(100, data['mean'].max() * 120))
+    for i, value in enumerate(data['mean'] * 100):
+        ax2.text(i, value + 3, f'{value:.1f}%', ha='center', fontsize=9)
+    ax.set_title('样本外PD分档与实际违约率')
+    ax.legend(loc='upper left', frameon=False)
+    ax2.legend(loc='upper right', frameon=False)
+    save(fig, 'fig_default_rate.png')
 
-    # Annotate rates
-    for i, r in enumerate(rates):
-        ax2.annotate(f'{r}%', (x[i] + width/2, r + 2), ha='center', fontsize=11, fontweight='bold', color='#c0392b')
 
-    ax.set_xticks(x)
-    ax.set_xticklabels(grades, fontsize=12)
-    ax.set_ylabel('企业数量', fontsize=12)
-    ax.set_title('风险等级违约率单调性验证', fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=10)
-    ax2.legend(loc='upper right', fontsize=10)
-
-    # Arrow annotation
-    ax.annotate('违约率从10%→56%\n严格单调递增', xy=(2.5, 45), fontsize=11,
-                ha='center', color='#c0392b', fontweight='bold',
-                bbox=dict(boxstyle='round,pad=0.3', facecolor='#fff5f5', edgecolor='#c0392b', alpha=0.8))
-
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUT, 'fig_default_rate.png'))
-    plt.close()
-    print('  [OK] fig_default_rate.png')
-
-# ==========================================
-# Figure 2: Case study comparison radar
-# ==========================================
-def fig_case_study_radar():
-    fig, axes = plt.subplots(1, 3, figsize=(12, 4.2), subplot_kw=dict(projection='polar'))
-
-    cases = [
-        {'name': 'E38 (A级·最优)', 'color': '#27ae60',
-         'data': [95, 90, 85, 90, 95, 88]},
-        {'name': 'E64 (C级·预警)', 'color': '#e67e22',
-         'data': [60, 25, 35, 75, 40, 50]},
-        {'name': 'E115 (D级·违约)', 'color': '#c0392b',
-         'data': [15, 10, 20, 55, 30, 25]},
-    ]
-
-    labels = ['收入规模', '利润率', '客户网络', '发票规范', '经营稳定', '增长趋势']
-    angles = np.linspace(0, 2*np.pi, len(labels), endpoint=False).tolist()
-    angles += angles[:1]
-
-    for ax, case in zip(axes, cases):
-        data = case['data'] + case['data'][:1]
-        ax.fill(angles, data, color=case['color'], alpha=0.25)
-        ax.plot(angles, data, color=case['color'], linewidth=2)
-        ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(labels, fontsize=8)
-        ax.set_ylim(0, 100)
-        ax.set_yticks([25, 50, 75])
-        ax.set_yticklabels(['25', '50', '75'], fontsize=7)
-        ax.set_title(case['name'], fontsize=11, fontweight='bold', color=case['color'], pad=12)
-
-    fig.suptitle('三家典型企业风险画像对比', fontsize=14, fontweight='bold', y=1.02)
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUT, 'fig_case_radar.png'))
-    plt.close()
-    print('  [OK] fig_case_radar.png')
-
-# ==========================================
-# Figure 3: Top 20 ranking bar
-# ==========================================
-def fig_ranking(s1):
-    fig, ax = plt.subplots(figsize=(9, 5.5))
-
-    top = s1.head(20).iloc[::-1]
-    labels = top['企业代号'].values
-    scores = top['TOPSIS得分'].values
-    grades = top['风险等级'].values
-
-    colors = []
-    for g in grades:
-        cmap = {'A': '#27ae60', 'B': '#2980b9', 'C': '#e67e22', 'D': '#c0392b'}
-        colors.append(cmap.get(g, '#999'))
-
-    bars = ax.barh(range(len(labels)), scores, color=colors, edgecolor='white', height=0.7)
-    ax.set_yticks(range(len(labels)))
-    ax.set_yticklabels(labels, fontsize=9)
-    ax.set_xlabel('TOPSIS得分', fontsize=12)
-    ax.set_title('附件1 Top 20 企业信贷风险评分排名', fontsize=14, fontweight='bold')
-    ax.set_xlim(0, max(scores) * 1.1)
-
-    # Value labels
-    for i, (s, g) in enumerate(zip(scores, grades)):
-        ax.text(s + 0.01, i, f'{s:.3f} ({g})', va='center', fontsize=8)
-
-    # Legend
-    legend_elements = [Patch(facecolor=c, label=f'{l}级') for l, c in
-                       [('A', '#27ae60'), ('B', '#2980b9'), ('C', '#e67e22'), ('D', '#c0392b')]]
-    ax.legend(handles=legend_elements, loc='lower right', fontsize=10)
-
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUT, 'fig_ranking.png'))
-    plt.close()
-    print('  [OK] fig_ranking.png')
-
-# ==========================================
-# Figure 4: Rate-churn curves
-# ==========================================
-def fig_rate_churn():
-    fig, ax = plt.subplots(figsize=(8, 5))
-
-    rates = np.linspace(0.04, 0.15, 200)
-
-    for grade, color, label in [
-        ('A', '#27ae60', 'A级 (R^2=0.993)'),
-        ('B', '#2980b9', 'B级 (R^2=0.995)'),
-        ('C', '#e67e22', 'C级 (R^2=0.995)'),
-    ]:
-        # Use the fitted coefficients from our model
-        coeffs = {
-            'A': [-76.41, 21.98, -0.697],
-            'B': [-67.93, 20.21, -0.650],
-            'C': [-63.94, 19.57, -0.639],
-        }
-        c = coeffs[grade]
-        churn = np.polyval(c, rates)
-        churn = np.clip(churn, 0, 1)
-        ax.plot(rates * 100, churn * 100, color=color, linewidth=2.5, label=label)
-
-    # Mark key points
-    ax.axvline(x=4, color='gray', linestyle='--', alpha=0.4)
-    ax.axvline(x=15, color='gray', linestyle='--', alpha=0.4)
-    ax.annotate('利率下限\n4%·流失率≈0%', xy=(4, 5), fontsize=9, ha='center',
-                bbox=dict(boxstyle='round', facecolor='#f0f0f0', alpha=0.7))
-    ax.annotate('利率上限\n15%·流失率≈90%', xy=(15, 90), fontsize=9, ha='center',
-                bbox=dict(boxstyle='round', facecolor='#f0f0f0', alpha=0.7))
-
-    ax.set_xlabel('贷款年利率 (%)', fontsize=12)
-    ax.set_ylabel('客户流失率 (%)', fontsize=12)
-    ax.set_title('贷款利率与客户流失率关系（附件3拟合）', fontsize=14, fontweight='bold')
-    ax.legend(fontsize=10)
-    ax.grid(True, alpha=0.2)
-    ax.set_xlim(3.5, 15.5)
-    ax.set_ylim(-5, 105)
-
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUT, 'fig_rate_churn.png'))
-    plt.close()
-    print('  [OK] fig_rate_churn.png')
-
-# ==========================================
-# Figure 5: COVID adjustment comparison
-# ==========================================
-def fig_covid(st2_adj):
-    fig, ax = plt.subplots(figsize=(8, 4.5))
-
-    industries = ['严重负面\n(3家)', '中度负面\n(69家)', '其他\n(187家)', '正面/轻影响\n(43家)']
-    orig = [40.1, 35.7, 42.0, 30.7]
-    adj = [22.4, 21.9, 38.7, 37.5]
-
-    x = np.arange(len(industries))
-    w = 0.32
-
-    bars1 = ax.bar(x - w/2, orig, w, color='#bdc3c7', edgecolor='white', label='调整前')
-    bars2 = ax.bar(x + w/2, adj, w, color='#0d7377', edgecolor='white', label='调整后')
-
-    # Add change arrows
-    for i, (o, a) in enumerate(zip(orig, adj)):
-        change = a - o
-        color = '#27ae60' if change > 0 else '#c0392b'
-        arrow = '↑' if change > 0 else '↓'
-        ax.annotate(f'{arrow}{abs(change):.1f}万', xy=(i, max(o, a) + 1.5),
-                   ha='center', fontsize=11, fontweight='bold', color=color)
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(industries, fontsize=10)
-    ax.set_ylabel('平均贷款额度 (万元)', fontsize=12)
-    ax.set_title('新冠疫情对各行业贷款额度的影响', fontsize=14, fontweight='bold')
-    ax.legend(fontsize=11)
-    ax.set_ylim(0, 50)
-
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUT, 'fig_covid.png'))
-    plt.close()
-    print('  [OK] fig_covid.png')
-
-# ==========================================
-# Figure 6: Weight distribution
-# ==========================================
-def fig_weights():
-    fig, ax = plt.subplots(figsize=(9, 5))
-
-    labels = ['销项总额', '进项总额', '利润率', '利润', '客户数', '供应商数',
-              '网络广度', '收入波动', '成本波动', '销项有效率', '进项有效率',
-              '销项作废率', '进项作废率', '收入增长率', '活跃月数']
-    ahp_w = [0.067, 0.067, 0.067, 0.067, 0.067, 0.067, 0.067,
-             0.080, 0.080, 0.069, 0.069, 0.069, 0.069, 0.048, 0.048]
-    entropy_w = [0.060, 0.052, 0.045, 0.038, 0.093, 0.067, 0.063,
-                 0.027, 0.031, 0.026, 0.026, 0.019, 0.023, 0.388, 0.042]
-    combined_w = [0.064, 0.061, 0.058, 0.055, 0.077, 0.067, 0.065,
-                  0.059, 0.060, 0.052, 0.052, 0.049, 0.051, 0.184, 0.046]
-
-    y = np.arange(len(labels))
-    h = 0.25
-
-    ax.barh(y + h, ahp_w, h, color='#2980b9', alpha=0.7, label='AHP权重 (60%)')
-    ax.barh(y, entropy_w, h, color='#e67e22', alpha=0.7, label='熵权 (40%)')
-    ax.barh(y - h, combined_w, h, color='#0d7377', alpha=0.9, label='组合权重')
-
-    ax.set_yticks(y)
-    ax.set_yticklabels(labels, fontsize=9)
-    ax.set_xlabel('权重值', fontsize=12)
-    ax.set_title('三种赋权方法对比：AHP vs 熵权 vs 组合', fontsize=14, fontweight='bold')
-    ax.legend(loc='lower right', fontsize=9)
+def plot_ranking(scores1):
+    top = scores1.nsmallest(20, '违约概率').sort_values('违约概率', ascending=True)
+    fig, ax = plt.subplots(figsize=(8.2, 6.2))
+    color = [COLORS[g] for g in top['风险等级']]
+    ax.barh(top['企业代号'], top['违约概率'] * 100, color=color)
     ax.invert_yaxis()
+    ax.set_xlabel('样本外违约概率 (%)')
+    ax.set_title('附件1低风险企业排名 Top 20')
+    save(fig, 'fig_ranking.png')
 
-    # Highlight the growth rate dominance issue
-    ax.annotate('熵权过高\n(0.388→0.184)', xy=(0.35, 13.2), fontsize=10,
-                color='#e67e22', fontweight='bold',
-                arrowprops=dict(arrowstyle='->', color='#e67e22', lw=1.5),
-                bbox=dict(boxstyle='round', facecolor='#fff8e1', alpha=0.8))
 
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUT, 'fig_weights.png'))
-    plt.close()
-    print('  [OK] fig_weights.png')
+def plot_rate_churn(churn_model):
+    rates = np.asarray(churn_model['rates']) * 100
+    fig, ax = plt.subplots(figsize=(7.4, 4.6))
+    for grade, color in [('A', '#0f766e'), ('B', '#2563a6'), ('C', '#d97706')]:
+        ax.plot(rates, np.asarray(churn_model['curves'][grade]) * 100, marker='o', markersize=3, linewidth=2, label=f'{grade}级', color=color)
+    ax.set_xlabel('贷款年利率 (%)')
+    ax.set_ylabel('客户流失率 (%)')
+    ax.set_title('单调约束下的利率与客户流失率')
+    ax.grid(alpha=0.2)
+    ax.legend(frameon=False)
+    save(fig, 'fig_rate_churn.png')
 
-# ==========================================
-# Figure 7: Model vs Bank rating heatmap
-# ==========================================
-def fig_crosstab(s1):
-    fig, ax = plt.subplots(figsize=(5, 4.5))
 
-    ct = pd.crosstab(s1['信誉评级'], s1['风险等级'])
-    data = ct.values
+def plot_coefficients(coefficients):
+    data = coefficients.head(12).sort_values('标准化系数')
+    fig, ax = plt.subplots(figsize=(8.2, 5.4))
+    colors = np.where(data['标准化系数'] > 0, '#b42318', '#0f766e')
+    ax.barh(data['特征'], data['标准化系数'], color=colors)
+    ax.axvline(0, color='#64748b', linewidth=0.8)
+    ax.set_xlabel('标准化逻辑回归系数')
+    ax.set_title('监督违约模型主要特征方向')
+    save(fig, 'fig_weights.png')
 
-    im = ax.imshow(data, cmap='YlOrRd', aspect='auto', vmin=0, vmax=17)
-    ax.set_xticks(range(4))
-    ax.set_xticklabels(['模型A', '模型B', '模型C', '模型D'], fontsize=11)
-    ax.set_yticks(range(4))
-    ax.set_yticklabels(['银行A', '银行B', '银行C', '银行D'], fontsize=11)
 
-    # Annotate cells
+def plot_crosstab(scores1):
+    table = pd.crosstab(scores1['信誉评级'], scores1['风险等级']).reindex(index=['A', 'B', 'C', 'D'], columns=['A', 'B', 'C', 'D'], fill_value=0)
+    fig, ax = plt.subplots(figsize=(5.6, 4.8))
+    image = ax.imshow(table.to_numpy(), cmap='GnBu')
     for i in range(4):
         for j in range(4):
-            text_color = 'white' if data[i, j] > 10 else 'black'
-            ax.text(j, i, str(data[i, j]), ha='center', va='center',
-                   fontsize=14, fontweight='bold', color=text_color)
-
-    ax.set_title('模型评级 vs 银行评级', fontsize=14, fontweight='bold')
-    plt.colorbar(im, ax=ax, shrink=0.8, label='企业数')
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUT, 'fig_crosstab.png'))
-    plt.close()
-    print('  [OK] fig_crosstab.png')
-
-# ==========================================
-# Figure 8: Sensitivity analysis
-# ==========================================
-def fig_sensitivity():
-    fig, ax = plt.subplots(figsize=(8, 3.5))
-
-    np.random.seed(42)
-    n = 100
-    spearman = 0.965 + np.random.normal(0, 0.008, n)
-    spearman = np.clip(spearman, 0.94, 0.99)
-
-    ax.plot(range(n), spearman, color='#0d7377', linewidth=1, alpha=0.7)
-    ax.axhline(y=0.965, color='#27ae60', linestyle='--', linewidth=2, label='均值 0.965')
-    ax.axhline(y=0.85, color='#e67e22', linestyle='--', linewidth=2, label='稳健性阈值 0.85')
-    ax.fill_between(range(n), 0.85, spearman, alpha=0.1, color='#0d7377')
-
-    ax.set_xlabel('扰动试验编号', fontsize=12)
-    ax.set_ylabel('Spearman 秩相关系数', fontsize=12)
-    ax.set_title('权重扰动灵敏度分析（100次 ±10%随机扰动）', fontsize=14, fontweight='bold')
-    ax.set_ylim(0.82, 1.0)
-    ax.legend(fontsize=10)
-
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUT, 'fig_sensitivity.png'))
-    plt.close()
-    print('  [OK] fig_sensitivity.png')
+            value = int(table.iloc[i, j])
+            ax.text(j, i, value, ha='center', va='center', color='white' if value > table.to_numpy().max() * 0.55 else '#12212f')
+    ax.set_xticks(range(4), [f'模型{g}' for g in table.columns])
+    ax.set_yticks(range(4), [f'银行{g}' for g in table.index])
+    ax.set_title('模型风险等级与银行原评级')
+    fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
+    save(fig, 'fig_crosstab.png')
 
 
-if __name__ == '__main__':
-    print('生成论文图表...')
-    s1, s2, f1, st2_adj = load_data()
+def plot_sensitivity(trials):
+    fig, ax = plt.subplots(figsize=(8.0, 4.2))
+    ax.plot(trials['试验编号'], trials['Spearman相关系数'], color='#0f766e', linewidth=1.4)
+    mean = trials['Spearman相关系数'].mean()
+    minimum = trials['Spearman相关系数'].min()
+    ax.axhline(mean, color='#2563a6', linestyle='--', label=f'均值 {mean:.4f}')
+    ax.axhline(minimum, color='#b42318', linestyle=':', label=f'最小值 {minimum:.4f}')
+    ax.set_xlabel('真实权重扰动试验编号')
+    ax.set_ylabel('Spearman相关系数')
+    ax.set_ylim(max(0.9, minimum - 0.01), 1.001)
+    ax.set_title('100次TOPSIS权重扰动稳定性')
+    ax.legend(frameon=False)
+    save(fig, 'fig_sensitivity.png')
 
-    fig_default_rate(s1)      # 图1: 核心验证
-    fig_case_study_radar()    # 图2: 案例雷达图
-    fig_ranking(s1)           # 图3: 排名
-    fig_rate_churn()          # 图4: 利率-流失率
-    fig_covid(st2_adj)        # 图5: 疫情调整
-    fig_weights()             # 图6: 权重分布
-    fig_crosstab(s1)          # 图7: 评级交叉
-    fig_sensitivity()         # 图8: 灵敏度
 
-    print(f'\n[OK] 8张图表已保存到 {OUT}/')
+def plot_covid(strategy3):
+    data = strategy3.groupby('行业类别')[['原贷款额度', '调整后额度']].mean().sort_values('调整后额度')
+    fig, ax = plt.subplots(figsize=(8.0, 4.8))
+    y = np.arange(len(data))
+    ax.barh(y - 0.18, data['原贷款额度'], height=0.34, color='#cbd5e1', label='调整前')
+    ax.barh(y + 0.18, data['调整后额度'], height=0.34, color='#0f766e', label='调整后')
+    ax.set_yticks(y, data.index)
+    ax.set_xlabel('平均贷款额度 (万元)')
+    ax.set_title('疫情赔率冲击前后行业平均额度')
+    ax.legend(frameon=False)
+    save(fig, 'fig_covid.png')
+
+
+def plot_case_radar(scores1, features1):
+    ordered = scores1.sort_values('违约概率')
+    selected = pd.concat([ordered.head(1), ordered.iloc[[len(ordered) // 2]], ordered.tail(1)])
+    axes = ['PD安全度', 'TOPSIS', '盈利能力', '经营活跃', '收入稳定', '发票合规']
+    merged = selected.merge(features1, left_on='企业代号', right_index=True)
+    profit = np.clip((merged['利润率'].to_numpy() + 1) / 2, 0, 1)
+    stability = 1 / (1 + merged['收入波动率'].to_numpy())
+    compliance = 1 - np.clip((merged['销项作废率'] + merged['销项负数金额率']).to_numpy(), 0, 1)
+    values = np.c_[1 - merged['违约概率'], merged['TOPSIS得分'], profit, merged['活跃月份比例'], stability, compliance]
+    angles = np.linspace(0, 2 * np.pi, len(axes), endpoint=False)
+    angles = np.r_[angles, angles[0]]
+    fig, ax = plt.subplots(figsize=(6.4, 6.0), subplot_kw={'polar': True})
+    for i, row in merged.reset_index(drop=True).iterrows():
+        points = np.r_[values[i], values[i, 0]]
+        ax.plot(angles, points, linewidth=2, label=f"{row['企业代号']} ({row['风险等级']}级)")
+        ax.fill(angles, points, alpha=0.08)
+    ax.set_xticks(angles[:-1], axes)
+    ax.set_ylim(0, 1)
+    ax.set_title('低、中、高风险企业经营画像')
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.18), ncol=3, frameon=False)
+    save(fig, 'fig_case_radar.png')
+
+
+def plot_data_scale(data_summary):
+    labels = ['附件1', '附件2']
+    input_counts = np.array([
+        data_summary['attachment1_input_invoices'],
+        data_summary['attachment2_input_invoices'],
+    ]) / 10000
+    output_counts = np.array([
+        data_summary['attachment1_output_invoices'],
+        data_summary['attachment2_output_invoices'],
+    ]) / 10000
+    enterprises = [
+        data_summary['attachment1_enterprises'],
+        data_summary['attachment2_enterprises'],
+    ]
+    x = np.arange(2)
+    fig, ax = plt.subplots(figsize=(7.6, 4.5))
+    ax.bar(x - 0.18, input_counts, width=0.36, color='#365d73', label='进项发票')
+    ax.bar(x + 0.18, output_counts, width=0.36, color='#0f766e', label='销项发票')
+    for i in range(2):
+        ax.text(i - 0.18, input_counts[i] + 0.6, f'{input_counts[i]:.1f}万', ha='center', fontsize=9)
+        ax.text(i + 0.18, output_counts[i] + 0.6, f'{output_counts[i]:.1f}万', ha='center', fontsize=9)
+        ax.text(i, -6.2, f'{enterprises[i]}家企业', ha='center', color='#475569', fontsize=9)
+    ax.set_xticks(x, labels)
+    ax.set_ylabel('发票记录数 (万条)')
+    ax.set_ylim(-8, max(input_counts.max(), output_counts.max()) * 1.18)
+    ax.set_title('两组企业数据规模')
+    ax.legend(frameon=False, ncol=2, loc='upper left')
+    save(fig, 'fig_data_scale.png')
+
+
+def plot_pd_distribution(scores1, scores2):
+    bins = np.linspace(0, 1, 16)
+    fig, ax = plt.subplots(figsize=(7.8, 4.5))
+    ax.hist(scores1['违约概率'], bins=bins, alpha=0.72, color='#365d73', label='附件1', edgecolor='white')
+    ax.hist(scores2['违约概率'], bins=bins, histtype='step', linewidth=2.3, color='#0f766e', label='附件2')
+    for threshold, label in [(0.10, 'A/B'), (0.20, 'B/C'), (0.40, 'C/D')]:
+        ax.axvline(threshold, color='#64748b', linewidth=0.9, linestyle='--')
+        ax.text(threshold + 0.008, ax.get_ylim()[1] * 0.88, label, rotation=90, va='top', fontsize=8, color='#475569')
+    ax.set_xlabel('预测违约概率 PD')
+    ax.set_ylabel('企业数')
+    ax.set_title('附件1与附件2预测PD分布')
+    ax.legend(frameon=False)
+    save(fig, 'fig_pd_distribution.png')
+
+
+def plot_profit_breakdown(strategy1, strategy2, strategy3):
+    frames = [strategy1, strategy2, strategy3]
+    labels = ['问题1', '问题2', '问题3']
+    interest = np.array([frame['预计留存后利息'].sum() for frame in frames])
+    default_loss = np.array([frame['预计违约损失'].sum() for frame in frames])
+    funding = np.array([frame['预计资金成本'].sum() for frame in frames])
+    net = interest - default_loss - funding
+    x = np.arange(3)
+    fig, ax = plt.subplots(figsize=(8.0, 4.8))
+    ax.bar(x, interest, width=0.56, color='#0f766e', label='留存后利息')
+    ax.bar(x, -default_loss, width=0.56, color='#8da3ad', label='违约损失')
+    ax.bar(x, -funding, width=0.56, bottom=-default_loss, color='#cbd5e1', label='资金成本')
+    ax.axhline(0, color='#64748b', linewidth=0.8)
+    for i, value in enumerate(net):
+        ax.text(i, interest[i] + max(interest) * 0.035, f'净收益 {value:.1f}', ha='center', fontsize=9, fontweight='bold')
+    ax.set_xticks(x, labels)
+    ax.set_ylabel('金额 (万元)')
+    ax.set_title('三问期望收益构成')
+    ax.legend(frameon=False, ncol=3, loc='lower center')
+    save(fig, 'fig_profit_breakdown.png')
+
+
+def create_all_charts(scores1, scores2, features1, coefficients, churn_model, sensitivity_trials,
+                      strategy1, strategy2, strategy3, data_summary):
+    ensure_directories()
+    setup_style()
+    plot_default_rate(scores1)
+    plot_ranking(scores1)
+    plot_rate_churn(churn_model)
+    plot_coefficients(coefficients)
+    plot_crosstab(scores1)
+    plot_sensitivity(sensitivity_trials)
+    plot_covid(strategy3)
+    plot_case_radar(scores1, features1)
+    plot_data_scale(data_summary)
+    plot_pd_distribution(scores1, scores2)
+    plot_profit_breakdown(strategy1, strategy2, strategy3)
+    print(f'  图表已写入: {CHART_DIR}')

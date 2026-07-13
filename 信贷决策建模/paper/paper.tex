@@ -1,731 +1,603 @@
 % !TEX program = xelatex
 \documentclass[12pt,a4paper]{ctexart}
-
-% ========== 页面设置 ==========
-\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm,headheight=15pt]{geometry}
-\usepackage{amsmath,amssymb}
-\usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{multirow}
-\usepackage{array}
-\usepackage{longtable}
-\usepackage{float}
-\usepackage{caption}
-\usepackage{subcaption}
-\usepackage{hyperref}
-\usepackage{cite}
-\usepackage{xcolor}
-\usepackage{enumitem}
-\usepackage{fancyhdr}
-\usepackage{titlesec}
-\setlength{\parskip}{6pt plus 2pt minus 1pt}
-\setlength{\parindent}{0pt}
+\usepackage[top=2.25cm,bottom=2.25cm,left=2.35cm,right=2.35cm,headheight=15pt]{geometry}
+\usepackage{amsmath,amssymb,booktabs,array,longtable,multirow}
+\usepackage{graphicx,float,caption,subcaption}
+\usepackage{xcolor,enumitem,fancyhdr,hyperref,titlesec}
+\usepackage[most]{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit}
 \graphicspath{{../output/charts/}}
+\input{generated_metrics.tex}
 
-% ========== 页眉页脚 ==========
+\definecolor{navy}{HTML}{17324D}
+\definecolor{teal}{HTML}{0F766E}
+\definecolor{pale}{HTML}{EDF5F4}
+\definecolor{linegray}{HTML}{D9E2E7}
+\hypersetup{colorlinks=true,linkcolor=navy,urlcolor=teal,citecolor=teal}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{3pt}
+\setlist{nosep,leftmargin=2em}
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[C]{中小微企业的信贷决策研究}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
+\titleformat{\section}{\Large\bfseries\color{navy}}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.7em}{}
+\captionsetup{font=small,labelsep=quad}
 
-% ========== 标题格式 ==========
-\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}
-\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+\newtcolorbox{intuitionbox}[1]{
+  colback=pale,colframe=teal,boxrule=0.7pt,arc=2mm,
+  left=8pt,right=8pt,top=6pt,bottom=6pt,
+  title={直觉理解：#1},fonttitle=\bfseries,coltitle=navy
+}
+\newtcolorbox{decisionbox}[1]{
+  colback=white,colframe=navy,boxrule=0.7pt,arc=2mm,
+  left=8pt,right=8pt,top=6pt,bottom=6pt,
+  title={银行视角：#1},fonttitle=\bfseries,coltitle=navy
+}
 
-% ========== 文档信息 ==========
-\title{\vspace{-2cm}\heiti\zihao{2} 中小微企业的信贷决策研究\\
-\vspace{0.3cm}\normalfont\zihao{4} ——基于AHP-熵权-TOPSIS的综合评价模型}
-\author{\zihao{4} 冯浩然}
+\title{\vspace{-1.7cm}\heiti\zihao{2}中小微企业的信贷决策研究\\
+\vspace{0.3cm}\normalfont\zihao{4}基于监督违约概率、单调流失率与混合整数规划}
+\author{\zihao{4}冯浩然}
 \date{}
 
 \begin{document}
 \maketitle
 
 \begin{center}
+\begin{minipage}{0.94\textwidth}
 \zihao{-5}
-\vspace{0.5cm}
-{\heiti 摘要：}
-中小微企业信贷决策的核心难点在于如何在缺乏传统财务数据（资产负债表、现金流量表）的条件下，
-仅凭交易票据信息量化企业信用风险。本文提出了一种\textbf{主客观融合}的信贷风险评估框架：
-(1) 从进销项发票中提取15个企业级财务与行为指标，构建涵盖实力、稳定性、信誉、成长的四维评价体系；
-(2) 采用AHP层次分析法确定主观权重（占60\%），熵权法确定客观权重（占40\%），通过组合赋权
-兼顾专家经验与数据规律，并通过TOPSIS法获得企业信用评分；
-(3) 利用附件1中的违约标签验证模型效果——风险等级从A到D的违约率呈严格单调递增（10.0\% $\to$
-12.9\% $\to$ 16.2\% $\to$ 56.0\%），D级违约率是A级的5.6倍；
-(4) 结合附件3数据建立利率-流失率二次关系（$R^2>0.99$），在总额约束下按风险得分差异化分配
-信贷额度和利率；（5）引入行业冲击系数框架量化新冠疫情对不同行业企业的差异化影响。
-灵敏度分析表明模型对权重扰动具有高度稳健性（Spearman $\rho=0.965$）。
-通过三家企业（E38、E64、E115）的案例分析，验证了模型评分与实际经营状况的一致性。
+\textbf{摘要：}
+针对仅有企业基础信息和进销项发票、且有标签样本仅\AttachmentOneEnterprises 家的中小微企业信贷决策问题，本文建立“监督违约概率、经营质量辅助解释、利率与额度联合优化、突发冲击重优化”的闭环模型。首先保留有效发票金额的正负符号，按连续自然月补零，构造规模、盈利、稳定性、活跃度、趋势、作废及红冲等\ModelFeatureCount 个特征。随后采用带$L_2$正则和类别平衡权重的逻辑回归估计违约概率，通过5次重复的5折嵌套分层交叉验证获得严格样本外预测，并用固定PD阈值划分A至D四档。模型样本外ROC-AUC为\ModelAUC，PR-AUC为\ModelPRAUC，Brier分数为\ModelBrier。TOPSIS不再承担违约预测，而是在附件1确定缩放边界和理想点后迁移至附件2，用于解释经营质量。对附件3采用保序回归得到随利率非降的客户流失率曲线，并以留存后利息、违约损失和资金成本构造单位额度期望收益。在原始D级和预测D级禁贷、单户额度为0或10至100万元、总预算精确满足的条件下，用混合整数线性规划配置贷款。疫情冲击通过赔率乘数作用于PD后重新评级、定价和分配。最终问题1、2、3分别向\PoneLoanCount、\PtwoLoanCount、\PthreeLoanCount 家企业授信，期望净收益分别为\PoneNetProfit、\PtwoNetProfit、\PthreeNetProfit 万元。100次真实权重扰动的Spearman相关系数均值为\SensitivityMean。模型把预测、定价、分配和压力测试放入同一可复算流程，并明确区分数据事实、模型结果和业务假设。
 
-\vspace{0.3cm}
-{\heiti 关键词：}中小微企业；信贷风险；AHP层次分析法；熵权法；TOPSIS；利率定价；新冠疫情
+\textbf{关键词：}中小微企业；违约概率；逻辑回归；保序回归；混合整数规划；信贷定价
+\end{minipage}
 \end{center}
 
 \newpage
 \tableofcontents
 \newpage
 
-% ============================================================
-\section{问题重述}
-% ============================================================
+\section{问题重述与任务拆解}
 
-\subsection{原始问题}
+某银行拟向中小微企业发放一年期贷款，单户额度为10至100万元，年利率范围为4\%至15\%。附件1给出\AttachmentOneEnterprises 家有信贷记录企业的信誉评级、是否违约标签以及进销项发票；附件2给出\AttachmentTwoEnterprises 家无信贷记录企业的基础信息和发票；附件3给出不同信誉等级下贷款利率与客户流失率的统计关系。
 
-某银行拟对中小微企业发放一年期贷款，额度为10--100万元，年利率范围为4\%--15\%。银行拥有以下数据：
-\begin{itemize}
-    \item \textbf{附件1}：123家有信贷记录企业的信息（含人工评定的A/B/C/D信誉评级、是否违约标签），
-          以及2017--2020年的进项发票（210,947条）和销项发票（162,484条）；
-    \item \textbf{附件2}：302家无信贷记录企业的信息，以及进项发票（395,175条）和销项发票（330,835条）；
-    \item \textbf{附件3}：29组贷款利率与客户流失率的统计数据（按A/B/C三个信誉等级分别记录）。
-\end{itemize}
-
-需解决的三个问题：
-\begin{enumerate}[label=(\arabic*)]
-    \item 对附件1中123家企业的信贷风险进行量化分析，在\textbf{年度信贷总额固定}时给出信贷策略；
-    \item 对附件2中302家企业的信贷风险进行量化分析，在\textbf{年度信贷总额为1亿元}时给出信贷策略；
-    \item 考虑\textbf{突发因素}（如新冠疫情）对企业的影响，给出信贷调整策略。
-\end{enumerate}
-
-\subsection{问题的数学本质}
-
-三个问题分别对应三种经典的决策分析范式：
-\begin{itemize}
-    \item \textbf{问题1}：\textbf{有监督的综合评价}。存在已知的违约标签可验证模型，核心是建立一个
-          能有效区分违约与正常企业的评分函数 $f: \mathbb{R}^m \to [0,1]$；
-    \item \textbf{问题2}：\textbf{无监督的外推评价}。将问题1中验证过的评价体系应用于无标签企业，
-          核心是论证评价框架的\textbf{可迁移性}——即当企业特征空间的结构相似时，同一评分函数有效；
-    \item \textbf{问题3}：\textbf{带外部冲击的鲁棒决策}。在问题2的基础上引入外生冲击向量
-          $\mathbf{S} = (S_1, S_2, \ldots)$ 调整评分，核心是冲击系数的\textbf{合理量化}。
-\end{itemize}
-
-% ============================================================
-\section{数据预处理与特征工程}
-% ============================================================
-
-\subsection{数据清洗}
-
-将三个附件的Excel数据导入SQLite数据库。清洗工作包括：
-\begin{enumerate}
-    \item 删除附件2进项发票信息表中3列完全为空的数据列；
-    \item 统一日期格式（附件1为日期，附件2为日期时间）；
-    \item 规范化发票状态字段：附件1销项发票中有47条记录标记为``\ 作废发票''（含前导空格），
-          统一修正为``作废发票''；
-    \item 对\verb|企业代号|、\verb|开票日期|、\verb|发票状态|三列建立联合索引以加速后续聚合查询。
-\end{enumerate}
-
-\subsection{指标体系的构建逻辑}
-
-在选择评价指标时，遵循\textbf{可获取性、可解释性、区分度}三个原则。信贷风险评估的核心问题是：
-\textbf{这家企业未来一年能否按时还款？}发票数据虽然不直接包含资产负债表，但隐含着回答这个问题的关键信息：
-
-\begin{itemize}
-    \item \textbf{还款能力}：由经营规模和盈利能力决定——收入越大、利润越高，还款越有保障；
-    \item \textbf{还款稳定性}：由经营波动决定——月度收入忽高忽低意味着现金流不稳定；
-    \item \textbf{还款意愿}：由历史交易合规性决定——作废发票多、负数发票多可能意味着经营不规范；
-    \item \textbf{发展前景}：由增长趋势决定——收入持续增长的企业更有可能维持还款能力。
-\end{itemize}
-
-基于上述逻辑，从发票数据中聚合计算了15个企业级指标，分为四个维度：
-
-\begin{table}[H]
-\centering
-\caption{信贷风险评价指标体系}
-\label{tab:indicators}
-\begin{tabular}{c|l|l|c}
-\toprule
-\textbf{维度（准则）} & \textbf{指标} & \textbf{数据来源与计算方式} & \textbf{方向} \\
-\midrule
-\multirow{5}{*}{实力B1}
-  & 销项总金额    & $\sum$(有效销项 $|$价税合计$|$)   & 极大型 \\
-  & 进项总金额    & $\sum$(有效进项 $|$价税合计$|$)   & 极大型 \\
-  & 利润          & 销项总金额 $-$ 进项总金额        & 极大型 \\
-  & 利润率        & 利润/销项总金额 （截断至$[-0.5,0.5]$）& 极大型 \\
-  & 交易网络广度  & 供应商数 $+$ 客户数            & 极大型 \\
-\midrule
-\multirow{2}{*}{稳定性B2}
-  & 收入波动率    & $\sigma_{\text{月收入}}/\mu_{\text{月收入}}$ & 极小型 \\
-  & 成本波动率    & $\sigma_{\text{月成本}}/\mu_{\text{月成本}}$ & 极小型 \\
-\midrule
-\multirow{4}{*}{信誉B3}
-  & 销项有效率    & 有效发票数/总发票数            & 极大型 \\
-  & 进项有效率    & 有效发票数/总发票数            & 极大型 \\
-  & 销项作废率    & 作废发票数/总发票数            & 极小型 \\
-  & 进项作废率    & 作废发票数/总发票数            & 极小型 \\
-\midrule
-\multirow{2}{*}{成长B4}
-  & 收入环比增长率 & 最近两月收入变化率（截断至$[-1,2]$）& 极大型 \\
-  & 综合活跃月数   & $\max$（进项月数, 销项月数）  & 极大型 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{特征变换的必要性}
-
-直接使用原始数据会导致模型被极端值主导。例如，某小型企业因上月收入接近零，
-其``收入环比增长率''可达数十倍，远超正常范围。为此进行以下变换：
+题目表面上要求给出额度和利率，实际包含四个连续问题：
 
 \begin{enumerate}
-    \item \textbf{对数变换}：对金额类指标（销项总金额等）应用 $\ln(1+x)$。原因是企业规模
-          呈幂律分布——少数大企业贡献大部分交易额，对数变换使模型不被少数超大企业主导；
-    \item \textbf{非线性惩罚}：对作废率应用 $e^{3x}-1$。原因是作废率从5\%升到10\%的信用含义
-          与从30\%升到35\%截然不同——后者意味着企业可能有系统性票据违规，需要指数级惩罚；
-    \item \textbf{截断处理}：增长率限制在$[-1,2]$（即$-100\%$至$+200\%$），利润率限制在$[-0.5,0.5]$。
-          超出范围的比率通常是``小分母问题''（如新开企业月收入极小导致增长率异常），
-          而非真实的经营信息。
+\item 如何把几十万张发票压缩为能够反映经营状况的企业特征；
+\item 如何用有标签企业学习“未来发生违约的可能性”；
+\item 如何在利率收入、客户流失、违约损失和资金成本之间取舍；
+\item 如何在预算、禁贷和单户上下限约束下形成可执行的组合方案。
 \end{enumerate}
 
-% ============================================================
-\section{模型选择：为什么是AHP+熵权+TOPSIS？}
-% ============================================================
+如果只给企业排一个综合名次，就无法回答“违约概率是多少”；如果只预测违约概率，又无法回答“利率和额度是多少”。因此本文把问题拆成风险预测、经营解释、定价和组合优化四层，每层只承担一个明确任务。
 
-在构建评价模型前，需要回答三个设计选择问题。
+\begin{intuitionbox}{把整道题看成银行的一条决策流水线}
+发票数据回答企业过去经营得怎么样；监督模型回答企业未来违约的可能性；流失率模型回答客户是否愿意接受某个利率；优化模型回答有限资金应当投给谁。前一层的输出是后一层的输入，而不是四个互不相关的方法。
+\end{intuitionbox}
 
-\subsection{赋权方法的选择：为什么用组合赋权？}
+\section{问题分析与总体建模路线}
 
-常用的赋权方法可分为三类：
+\subsection{为什么不能直接使用银行原评级}
 
-\begin{table}[H]
-\centering
-\caption{赋权方法对比}
-\label{tab:weight_comparison}
-\begin{tabular}{c|l|l|l}
-\toprule
-\textbf{方法} & \textbf{类型} & \textbf{优点} & \textbf{缺点} \\
-\midrule
-AHP & 主观 & 融入专家经验，可解释 & 依赖专家判断质量 \\
-熵权法 & 客观 & 基于数据，无主观偏差 & 可能被噪声指标误导 \\
-CRITIC法 & 客观 & 考虑指标冲突性 & 计算复杂，不适合大规模 \\
-\bottomrule
-\end{tabular}
-\end{table}
+附件2没有银行信誉评级，原评级无法直接迁移；同时，附件1的评级是人工综合判断，不等同于真实违约标签。本文保留原评级用于准入约束和对照分析，但用“是否违约”训练概率模型。这样既尊重银行已有规则，也使附件2获得统一的风险尺度。
 
-\textbf{选择组合赋权（AHP + 熵权法）而非单一方法的理由}：
+\subsection{为什么TOPSIS不是风险主模型}
 
-纯熵权法存在一个致命问题：如果某个指标本身波动大但与信用风险无关（例如``收入环比增长率''受季节性
-和开业时间影响极大），它会被赋予过高权重。在附件1的实际计算中，收入环比增长率的原始熵权高达
-0.388——但这并不意味着它比其他指标重要4倍。AHP通过专家经验对此进行了纠正（AHP权重仅0.048），
-组合后降至0.184。
+TOPSIS适合回答“哪个企业更接近理想经营状态”，但它没有直接利用违约标签。若把TOPSIS分数直接当作PD，会把经营质量排序和违约概率混为一谈。因此本文用逻辑回归估计PD，用TOPSIS解释企业经营质量，二者职责分开。
 
-\textbf{选择AHP而非纯熵权法的理由}：信贷风险评价是领域知识密集型问题——银行信贷员知道
-``作废发票多''比``规模小''更危险。这种先验知识必须通过AHP等主观赋权方法引入模型。
-
-\textbf{选择熵权法而非CRITIC法的理由}：CRITIC法需要计算指标间相关系数矩阵，在15个指标且数据
-分布偏态的情况下，Pearson相关系数不够稳健；而熵权法基于信息熵，对分布形态不敏感。
-
-\subsection{组合比例的选择：为什么$\alpha=0.6$？}
-
-组合权重公式为 $w = \alpha w_{\text{AHP}} + (1-\alpha) w_{\text{Entropy}}$。$\alpha$的取值
-需要在``相信专家''和``相信数据''之间权衡。
-
-本文选择$\alpha=0.6$的依据：
-\begin{enumerate}
-    \item 对$\alpha \in \{0.3, 0.4, 0.5, 0.6, 0.7\}$进行了违约分离度测试（违约企业与正常企业
-          的TOPSIS均值差），$\alpha=0.6$时分离度最大（差值0.052）；
-    \item $\alpha=0.6$时，收入环比增长率组合权重从0.388降至0.184，但仍保留了一定影响力——
-          成长性确实对信用有预测作用，但不应主导模型；
-    \item 在信贷领域，专家的判断通常比纯数据更可靠，因为数据可能反映相关性而非因果性。
-\end{enumerate}
-
-\subsection{评价方法的选择：为什么用TOPSIS？}
-
-常用的多指标综合评价方法包括TOPSIS、灰色关联分析（GRA）和模糊综合评价（FCE）。本文选择TOPSIS
-的理由如下：
-
-\begin{table}[H]
-\centering
-\caption{评价方法适用性对比}
-\label{tab:method_comparison}
-\begin{tabular}{c|l|l}
-\toprule
-\textbf{方法} & \textbf{核心思想} & \textbf{不适用于本题的原因} \\
-\midrule
-GRA & 与最优参考序列的关联度 & 需要设定参考序列；样本数大时区分度弱 \\
-FCE & 模糊集合的隶属度 & 依赖评语集的主观划分；不适合连续数值指标 \\
-\textbf{TOPSIS} & \textbf{距理想解的欧氏距离} & \textbf{直观、非线性、适合大规模评价} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-TOPSIS的优势在于：（1）利用欧氏距离的非线性性质，对异常值有自然的``拉近''效应——即一个指标
-极差但其他指标极好的企业不会被简单地平均；（2）结果在$[0,1]$上有自然的概率解释；
-（3）不需要预先设定评语集或参考序列，减少了主观干扰环节。
-
-% ============================================================
-\section{信贷风险评估模型}
-% ============================================================
-
-\subsection{AHP层次分析法}
-
-AHP的核心是将复杂的多指标评价问题分解为层次结构，通过两两比较确定各指标的相对重要性。
-本文建立三层结构：\textbf{目标层（信贷风险） $\to$ 准则层（B1实力/B2稳定性/B3信誉/B4成长）
-$\to$ 指标层（15个指标）}。
-
-\subsubsection{准则层判断矩阵的构造依据}
-
-准则层两两比较的标度基于以下信贷风控常识：
-\begin{itemize}
-    \item \textbf{实力 vs 稳定性（3:1）}：一家收入高但波动大的公司，银行通常仍愿放贷（只是利率更高）；
-          但一家收入稳定却极低的公司，银行很难放贷。实力的重要性显著高于稳定性；
-    \item \textbf{实力 vs 信誉（2:1）}：银行更看重``还不起''（能力）而非``不想还''（意愿），
-          因为后者可通过法律手段约束。但差距不宜过大——严重违规（高作废率）也是真实风险；
-    \item \textbf{信誉 vs 稳定性（2:1）}：交易合规性是比经营波动更强的风险信号；
-    \item \textbf{成长 vs 实力（1:4）}：成长性是``锦上添花''，实力才是``雪中送炭''。
-\end{itemize}
-
-据此构造准则层判断矩阵：
-
-\begin{equation}
-\mathbf{B} = \begin{bmatrix}
-1   & 3   & 2   & 4 \\
-1/3 & 1   & 1/2 & 2 \\
-1/2 & 2   & 1   & 3 \\
-1/4 & 1/2 & 1/3 & 1
-\end{bmatrix}
-\end{equation}
-
-采用几何平均法计算权重：
-\begin{equation}
-w_k = \frac{\left(\prod_{j=1}^{n} b_{kj}\right)^{1/n}}{\sum_{i=1}^{n}\left(\prod_{j=1}^{n} b_{ij}\right)^{1/n}}
-\end{equation}
-得到 $\mathbf{w}_B = (0.467, 0.160, 0.278, 0.095)$。
-
-一致性检验：$\lambda_{\max} = 4.031$，$CI = 0.011$，$CR = CI/RI(4) = 0.011/0.89 = 0.0093 < 0.10$，
-通过检验。这意味着判断矩阵的逻辑自洽性良好——不存在``A比B重要，B比C重要，但C又比A重要''的逻辑矛盾。
-
-\subsection{熵权法}
-
-熵权法基于信息论原理：如果所有企业在某个指标上的取值几乎相同，那么该指标对区分企业信用好坏
-几乎没有贡献，应赋予低权重；反之，差异大的指标信息量大，应赋予高权重。
-
-计算步骤如下：
-\begin{enumerate}
-    \item \textbf{比重矩阵}：$p_{ij} = x'_{ij} / \sum_{i=1}^{n} x'_{ij}$，其中$x'_{ij}$为正向化后的值；
-    \item \textbf{信息熵}：$e_j = -\frac{1}{\ln n}\sum_{i=1}^{n} p_{ij} \ln(p_{ij} + \varepsilon)$，
-          $\varepsilon = 10^{-12}$防止$\ln(0)$；
-    \item \textbf{差异系数}：$d_j = 1 - e_j$；
-    \item \textbf{权重}：$w_j^{\text{Ent}} = d_j / \sum d_j$。
-\end{enumerate}
-
-附件1的熵权法结果显示，收入环比增长率的熵权（0.388）远高于其他指标，这是因为部分新开业企业
-的增长率极高，造成数据离散度大。但如前文模型选择部分所述，这并不意味着增长率的重要性是交易
-有效率的15倍。这正是组合赋权$\alpha=0.6$需要发挥作用的地方。
-
-\subsection{组合赋权与TOPSIS评分}
-
-组合权重为 $w_j = 0.6 \cdot w_j^{\text{AHP}} + 0.4 \cdot w_j^{\text{Ent}}$。
-TOPSIS计算步骤为：正向化 $\to$ 向量归一化 $\to$ 加权矩阵 $\to$ 正负理想解 $\to$ 欧氏距离
-$\to$ 相对贴近度 $C_i = D_i^-/(D_i^++D_i^-)$。$C_i$越大表示企业越优，按降序排列得风险排名。
+\subsection{完整流程}
 
 \begin{figure}[H]
 \centering
-\begin{subfigure}{0.48\textwidth}
+\begin{tikzpicture}[
+node distance=7mm and 5mm,
+box/.style={draw=navy,rounded corners=2mm,minimum width=2.75cm,minimum height=1.0cm,align=center,fill=white},
+sub/.style={draw=teal,rounded corners=2mm,minimum width=2.75cm,minimum height=1.0cm,align=center,fill=pale},
+arr/.style={-{Latex[length=2mm]},thick,color=navy}
+]
+\node[box] (raw) {原始企业信息\\进销项发票};
+\node[box,right=of raw] (feat) {净额与连续月历\\16项PD特征};
+\node[box,right=of feat] (pd) {监督逻辑回归\\样本外PD};
+\node[box,right=of pd] (grade) {固定PD档位\\A、B、C、D};
+\node[box,below=of grade] (profit) {保序流失率与收益\\最优利率};
+\node[box,left=of profit] (milp) {MILP额度分配\\预算与准入约束};
+\node[box,left=of milp] (shock) {疫情赔率冲击\\重新评级与优化};
+\node[sub,left=of shock] (topsis) {固定尺度TOPSIS\\经营质量解释支线};
+\draw[arr] (raw) -- (feat);
+\draw[arr] (feat) -- (pd);
+\draw[arr] (pd) -- (grade);
+\draw[arr] (grade) -- (profit);
+\draw[arr] (profit) -- (milp);
+\draw[arr] (milp) -- (shock);
+\draw[-{Latex[length=2mm]},thick,dashed,color=teal]
+  (feat.south) -- ++(0,-3mm) -| (topsis.north);
+\end{tikzpicture}
+\caption{从原始发票到信贷策略的完整流程}
+\end{figure}
+
+\begin{decisionbox}{流程图如何阅读}
+PD是风险主线，TOPSIS是解释支线。流失率把利率和客户接受行为连接起来，MILP把单户最优收益转化为全行预算下的组合方案。疫情发生后不是简单缩减原额度，而是重新运行PD调整、评级、定价和额度优化。
+\end{decisionbox}
+
+\section{数据理解、基本假设与符号}
+
+\subsection{数据规模}
+
+附件1共有\AttachmentOneInvoices 条进销项发票，附件2共有\AttachmentTwoInvoices 条。附件1中已知违约企业为\KnownDefaults 家，样本违约率为\KnownDefaultRate\%。附件3包含29个利率与流失率观测点。数据量最大的部分是票据明细，而真正用于监督学习的企业样本只有123家，因此模型应优先稳定和可解释，不宜盲目使用复杂黑箱。
+
+\begin{figure}[H]
 \centering
+\includegraphics[width=0.78\textwidth]{fig_data_scale.png}
+\caption{附件1与附件2的数据规模}
+\end{figure}
+
+\subsection{基本假设}
+
+\begin{table}[H]
+\centering
+\caption{主要假设及其作用}
+\small
+\begin{tabular}{p{3.1cm}p{2.2cm}p{8.0cm}}
+\toprule
+假设 & 取值 & 说明\\
+\midrule
+贷款期限 & 1年 & 与题目一致，利率和损失均按一年期计算\\
+问题1预算 & 8000万元 & 题目未明确给出，作为可配置情景，不把它视为数据事实\\
+问题2与3预算 & 10000万元 & 按题目给出的1亿元年度额度\\
+违约损失率LGD & 60\% & 违约后本金的期望损失比例，可由银行回收数据替换\\
+资金成本率 & 2.5\% & 银行投放资金的机会成本，可按真实资金价格更新\\
+客户流失 & 不接受贷款 & 流失客户不产生放款、利息、损失和资金成本\\
+行业冲击 & 作用于赔率 & 用于情景压力测试，不视为疫情的精确因果估计\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{主要符号}
+
+\begin{longtable}{p{1.7cm}p{4.3cm}p{7.5cm}}
+\caption{主要符号说明}\\
+\toprule
+符号 & 名称 & 含义\\
+\midrule
+\endfirsthead
+\toprule
+符号 & 名称 & 含义\\
+\midrule
+\endhead
+$i$ & 企业索引 & 附件中的某一家企业\\
+$y_i$ & 违约标签 & 违约取1，不违约取0\\
+$\boldsymbol x_i$ & 特征向量 & 企业的规模、盈利、稳定性、活跃度和票据行为\\
+$p_i$ & 违约概率PD & 模型预测企业一年内违约的概率\\
+$r_i$ & 贷款年利率 & 在附件3的观测利率网格上选择\\
+$c_i(r)$ & 客户流失率 & 企业面对利率$r$时拒绝贷款的概率\\
+$q_i(r)$ & 客户留存率 & $q_i(r)=1-c_i(r)$\\
+$L$ & LGD & 违约时的损失比例，本文取60\%\\
+$c_f$ & 资金成本率 & 本文取2.5\%\\
+$u_i(r)$ & 单位额度期望收益 & 每投放1万元给企业$i$的期望净收益\\
+$x_i$ & 授信额度 & 企业$i$获得的名义贷款额度，单位为万元\\
+$z_i$ & 选择变量 & 获贷为1，不获贷为0\\
+$B$ & 总预算 & 问题1为8000万元，问题2和3为10000万元\\
+$k_i$ & 疫情冲击系数 & 乘到企业的违约赔率上\\
+\bottomrule
+\end{longtable}
+
+\section{从发票到企业特征}
+
+\subsection{票据口径与有符号净额}
+
+对状态为“有效发票”的记录使用不含税金额列，并保留正负符号。正数票据表示正常交易，负数票据通常对应红冲或退货，应冲减而不是取绝对值。企业$i$的销项净额定义为
+\begin{equation}
+R_i=\sum_{j\in\mathcal V_i^{out}}a_{ij},
+\end{equation}
+其中$\mathcal V_i^{out}$为有效销项票据集合，$a_{ij}$为有符号金额。进项净额$C_i$同理。税额不与金额重复相加；作废票据不进入净额，但其数量进入作废率特征。
+
+\begin{intuitionbox}{为什么负数发票不能取绝对值}
+假设企业先开出100万元销项发票，随后发生20万元退货并开具$-20$万元红冲票。真实销售净额是$100-20=80$万元。如果对负数取绝对值，就会得到$100+20=120$万元，收入被高估50\%。若20万元票据是作废票，则它完全不进入净额，但会提高作废率。
+\end{intuitionbox}
+
+\subsection{连续月历与经营断档}
+
+对每家企业，从第一张到最后一张有效票据构造连续自然月序列，无交易月份补0。设观察月数为$M_i$，有交易的月份为$A_i$，则
+\begin{equation}
+\mathrm{ActiveRatio}_i=\frac{A_i}{M_i},\qquad
+\mathrm{AnnualRevenue}_i=\frac{12R_i}{M_i}.
+\end{equation}
+
+\begin{intuitionbox}{补0和删除月份有什么区别}
+一家企业6个月内只有1月和6月有收入。如果只保留有收入的两个月，它看起来“每个月都在经营”；补齐2月至5月的0之后，活跃月份比例只有$2/6$，中间断档被保留下来。风险模型由此能够区分持续经营与偶发大额交易。
+\end{intuitionbox}
+
+最近断档月数记录最后一个有交易月份至观察期末的间隔；收入和成本波动率使用连续月序列标准差除以平均绝对规模；趋势率由月份序号对月净额的线性斜率再除以平均绝对规模得到。所有分母为0的比率按0处理，最终数值列检查并消除缺失值和无穷值。
+
+\subsection{16项PD特征}
+
+\begin{table}[H]
+\centering
+\caption{监督PD模型的特征分组}
+\small
+\begin{tabular}{p{2.4cm}p{5.1cm}p{6.0cm}}
+\toprule
+维度 & 特征 & 风险含义\\
+\midrule
+规模与盈利 & 年化销项净额、年化利润、利润率、年化客户数、年化供应商数 & 衡量经营规模、盈利空间和交易网络\\
+稳定与趋势 & 收入波动率、成本波动率、收入趋势率 & 识别经营剧烈波动或持续收缩\\
+经营连续性 & 活跃月份比例、最近断档月数 & 识别长期停顿和低频经营\\
+票据行为 & 进销项作废率、负数发票率、负数金额率 & 反映作废、红冲、退货等异常或经营特征\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+年化销项净额、年化利润、客户数和供应商数呈明显长尾，先做有符号对数变换
+\begin{equation}
+T(x)=\operatorname{sign}(x)\log(1+|x|),
+\end{equation}
+再用训练折的1\%和99\%分位点截尾，并按训练折均值、标准差进行标准化。验证折和附件2只应用训练阶段得到的参数，避免把未来或待预测数据的信息泄漏进模型。
+
+\section{监督违约概率模型}
+
+\subsection{为什么选择正则逻辑回归}
+
+附件1只有123家企业和27个违约样本。复杂模型虽然能提高训练集拟合度，却可能只记住少数企业。逻辑回归直接输出0至1之间的概率，系数方向可解释，配合$L_2$正则能抑制小样本下的系数剧烈波动，因此适合作为主模型\cite{hosmer2013,hastie2009}。
+
+令$y_i=1$表示违约，标准化特征向量为$\boldsymbol x_i$，线性风险得分为
+\begin{equation}
+z_i=\beta_0+\boldsymbol x_i^{\mathsf T}\boldsymbol\beta,
+\end{equation}
+再通过Sigmoid函数转为PD：
+\begin{equation}
+\hat p_i=\sigma(z_i)=\frac{1}{1+e^{-z_i}}.
+\end{equation}
+
+\begin{intuitionbox}{线性得分如何变成概率}
+如果某企业的标准化特征经过系数加权后得到$z=0$，则$\sigma(0)=0.5$；若$z=-2$，PD约为11.9\%；若$z=2$，PD约为88.1\%。Sigmoid函数把任意实数压缩到0和1之间，同时保留风险高低顺序。
+\end{intuitionbox}
+
+\subsection{类别平衡与L2正则}
+
+非违约企业明显多于违约企业。如果所有企业权重相同，模型可能偏向多数类。本文让两类样本的总训练权重各占一半：
+\begin{equation}
+w_i=\begin{cases}
+\dfrac{n}{2n_1},&y_i=1,\\[4pt]
+\dfrac{n}{2n_0},&y_i=0,
+\end{cases}
+\end{equation}
+其中$n_1,n_0$分别为违约和非违约数量。优化目标为
+\begin{equation}
+\min_{\beta_0,\boldsymbol\beta}
+\frac{1}{\sum_iw_i}\sum_iw_i\left[\log(1+e^{z_i})-y_iz_i\right]
++\frac{\lambda}{2}\|\boldsymbol\beta\|_2^2.
+\end{equation}
+
+后一项是$L_2$惩罚。$\lambda$越大，系数越接近0，模型更平滑但可能欠拟合；$\lambda$越小，模型更贴合训练数据但可能过拟合。最终全样本模型选择$\lambda=\ModelLTwo$。
+
+\subsection{为什么还需要先验校正}
+
+类别平衡让训练过程暂时把两类看得同样重要，但真实样本违约率只有\KnownDefaultRate\%。若直接输出平衡训练概率，会系统性高估PD。因此在预测时把训练折真实违约率$\pi$的对数赔率加回：
+\begin{equation}
+\hat p_i=\sigma\left(\hat z_i+\log\frac{\pi}{1-\pi}\right).
+\end{equation}
+
+这一步不改变企业大致风险顺序，但把概率水平拉回真实样本基准。它回答的是“在真实违约率背景下，这家企业大约有多大风险”，而不是“在两类被人为平衡后，模型有多确信”。
+
+\subsection{嵌套重复样本外验证}
+
+若在训练模型的同一批企业上评价，模型可能因为记住样本而显得过于优秀。本文采用外层5次重复、每次5折的分层交叉验证；每个外层训练集内部再用4折交叉验证，从$\{0.01,0.1,1,10\}$中选择$\lambda$。
+
+一次外层循环的步骤是：
+
+\begin{enumerate}
+\item 把约80\%企业作为外层训练集，约20\%作为外层测试集，并保持违约比例接近；
+\item 只在外层训练集内部选择$\lambda$；
+\item 只用外层训练集计算截尾点、均值和标准差；
+\item 训练模型并预测从未参与训练的外层测试企业；
+\item 重复直到每家企业都获得一次样本外预测；更换随机划分后再重复5次，最后取均值。
+\end{enumerate}
+
+\begin{intuitionbox}{内层和外层分别做什么}
+内层负责“选模型”，例如决定正则强度；外层负责“考模型”，只评价已经选好的完整流程。如果用同一折既选参数又报成绩，测试集就间接参与了模型选择，结果仍会偏乐观。
+\end{intuitionbox}
+
+\section{PD等级与模型验证}
+
+\subsection{固定风险档位}
+
+为使不同附件和未来批次具有相同含义，PD档位采用固定阈值，而不是每批企业按人数分位数强行分组：
+\begin{equation}
+g(p)=\begin{cases}
+A,&0\le p<0.10,\\
+B,&0.10\le p<0.20,\\
+C,&0.20\le p<0.40,\\
+D,&p\ge0.40.
+\end{cases}
+\end{equation}
+
+\subsection{四个验证指标怎样理解}
+
+\begin{itemize}
+\item \textbf{ROC-AUC}：随机抽取一个违约企业和一个非违约企业，模型把违约企业排在更高风险位置的概率。0.5近似随机，越接近1越好。
+\item \textbf{PR-AUC}：关注高风险名单中违约企业能否被找出，特别适合违约样本较少的情况。
+\item \textbf{Brier分数}：预测概率与0/1真实结果的平均平方差，越小越好。它同时惩罚过高和过低的概率。
+\item \textbf{Log Loss}：对“非常自信但判断错误”的预测处罚更重，越小越好。
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{重复嵌套样本外预测性能}
+\begin{tabular}{lcccc}
+\toprule
+指标 & ROC-AUC & PR-AUC & Brier & Log Loss\\
+\midrule
+数值 & \ModelAUC & \ModelPRAUC & \ModelBrier & \ModelLogLoss\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{固定PD档位的样本外违约表现}
+\begin{tabular}{ccccc}
+\toprule
+等级 & 企业数 & 违约数 & 实际违约率 & 平均预测PD\\
+\midrule
+A & \GradeACount & \GradeADefaults & \GradeARate\% & \GradeAPD\%\\
+B & \GradeBCount & \GradeBDefaults & \GradeBRate\% & \GradeBPD\%\\
+C & \GradeCCount & \GradeCDefaults & \GradeCRate\% & \GradeCPD\%\\
+D & \GradeDCount & \GradeDDefaults & \GradeDRate\% & \GradeDPD\%\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.49\textwidth}
+\includegraphics[width=\textwidth]{fig_default_rate.png}
+\caption{各PD档实际违约率}
+\end{subfigure}\hfill
+\begin{subfigure}{0.49\textwidth}
+\includegraphics[width=\textwidth]{fig_pd_distribution.png}
+\caption{两组企业PD分布}
+\end{subfigure}
+\caption{PD模型的分档验证与迁移结果}
+\end{figure}
+
+\begin{decisionbox}{验证结果意味着什么}
+ROC-AUC为\ModelAUC，说明模型能较好地区分风险顺序；D档20家企业中有16家实际违约，实际违约率80.0\%，高风险得到集中识别。A、B、C、D档的实际违约率依次上升，固定阈值具有业务解释力。但附件1只有123家企业，单个档位样本仍少，因此这些概率适合用于组合决策，不应被理解为永不变化的精确真值。
+\end{decisionbox}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.53\textwidth}
 \includegraphics[width=\textwidth]{fig_weights.png}
-\caption{三种赋权方法对比}
-\label{fig:weights}
+\caption{标准化特征系数方向}
+\end{subfigure}\hfill
+\begin{subfigure}{0.43\textwidth}
+\includegraphics[width=\textwidth]{fig_crosstab.png}
+\caption{模型等级与银行原评级}
 \end{subfigure}
-\hfill
-\begin{subfigure}{0.48\textwidth}
-\centering
-\includegraphics[width=\textwidth]{fig_ranking.png}
-\caption{附件1 TOPISIS排名（Top 20）}
-\label{fig:ranking}
-\end{subfigure}
-\caption{AHP、熵权与组合赋权的权重对比，以及TOPSIS最终排名。组合赋权有效压制了收入环比增长率的熵权膨胀（0.388$\to$0.184），同时保留了其他指标的合理权重。}
-\label{fig:weights_and_ranking}
+\caption{风险模型解释与原评级对照}
 \end{figure}
 
-\subsection{模型验证}
+系数为正表示该特征增加时模型PD倾向上升，系数为负表示PD倾向下降。由于特征之间可能相关，单个系数反映“其他特征不变时”的方向，不代表直接因果关系。模型等级与银行原评级不完全相同是正常现象：银行评级包含人工经验，模型等级则只依据发票和历史标签。
 
-验证模型的标准是：它能否将已知的27家违约企业和96家正常企业有效区分？
+\section{固定尺度TOPSIS辅助解释}
 
-\subsubsection{均值差异检验}
+\subsection{经营质量分数的作用}
 
-\begin{itemize}
-    \item 27家违约企业的平均TOPSIS得分为0.181；
-    \item 96家正常企业的平均TOPSIS得分为0.233；
-    \item 差值0.052。这在实际意义上意味着\textbf{模型将违约企业平均排在正常企业之后}。
-\end{itemize}
+逻辑回归回答“企业会不会违约”，TOPSIS回答“企业在经营规模、盈利、稳定和票据行为上离理想状态有多近”。本文使用14项经营质量指标，其中规模、盈利、活跃度和趋势为效益型，波动、断档、作废和负数金额率为成本型\cite{hwang1981}。
 
-\subsubsection{风险等级与违约率的单调性}
+对附件1第$j$项指标确定1\%和99\%截尾点并作0至1归一化；附件2沿用附件1的同一边界，超出范围时截到$[0,1]$。正负理想点和权重也只在附件1确定，避免待评价企业改变评分尺子。
 
-将123家企业按TOPSIS得分从高到低分为A（前25\%）、B（25\%--50\%）、C（50\%--80\%）、
-D（后20\%）四档。这是模型最重要的验证——好的模型应该让风险等级与违约率严格单调：
-
-\begin{table}[H]
-\centering
-\caption{风险等级违约率分布（附件1验证）}
-\label{tab:default_validation}
-\begin{tabular}{c|c|c|c|c}
-\toprule
-\textbf{等级} & \textbf{企业数} & \textbf{违约数} & \textbf{违约率} & \textbf{含义} \\
-\midrule
-A & 30 & 3 & 10.0\% & 模型认为最安全的群体，违约率最低 \\
-B & 31 & 4 & 12.9\% & 较安全，违约率略高于A \\
-C & 37 & 6 & 16.2\% & 中等风险，违约率进一步上升 \\
-D & 25 & 14 & \textbf{56.0\%} & 模型认为最危险的群体，违约率剧烈攀升 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-违约率从A级的10.0\%到D级的56.0\%呈严格单调递增，D级违约率是A级的5.6倍。
-这一结果验证了模型的\textbf{序数有效性}——虽然具体概率值可能因样本有限而波动，
-但模型给出的\textbf{排名顺序}与真实风险高度一致。
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.85\textwidth]{fig_default_rate.png}
-\caption{风险等级与违约率的单调性验证。柱状图显示各等级企业数量与违约数量，折线显示违约率从A级10.0\%单调递增至D级56.0\%。这是模型有效性的核心证据。}
-\label{fig:default_rate}
-\end{figure}
-
-\subsubsection{模型评级与银行人工评级的差异分析}
-
-\begin{table}[H]
-\centering
-\caption{模型评级 vs 银行评级交叉表}
-\label{tab:crosstab_detail}
-\begin{tabular}{c|cccc|c}
-\toprule
-& \textbf{模型A} & \textbf{模型B} & \textbf{模型C} & \textbf{模型D} & \textbf{银行合计} \\
-\midrule
-银行A & 10 & 11 & 6  & 0  & 27 \\
-银行B & 9  & 9  & 17 & 3  & 38 \\
-银行C & 8  & 8  & 9  & 9  & 34 \\
-银行D & 1  & 4  & 6  & 13 & 24 \\
-\midrule
-模型合计 & 28 & 32 & 38 & 25 & 123 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-两种评级的完全一致率仅为33.3\%，但\textbf{相邻一致率（相差不超过1级）达到81.3\%}。
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.55\textwidth]{fig_crosstab.png}
-\caption{模型评级与银行原始评级交叉热力图。对角线上的深色格表示两种评级一致的企业，大部分差异在相邻等级内。}
-\label{fig:crosstab}
-\end{figure}
-
-这不一致是正常的，且恰恰说明了模型的独特价值：
-
-\begin{itemize}
-    \item 银行给E103评为D级的理由可能不在发票数据中（如企业主个人信用差、涉及诉讼等），
-          但该企业发票数据表现优秀（利润率60\%，有效发票率超84\%），模型基于客观数据给出了较高评分。
-          \textbf{这不是模型错误，而是模型补充了银行可能忽略的正面信息}。
-    \item 银行给E64评为A级，但模型给出了C级。检查发现该企业收入波动极大（月度变异系数>2）、
-          利润率微薄（$<$5\%）。模型捕捉到了发票数据中隐含的风险信号。
-\end{itemize}
-
-% ============================================================
-\section{典型企业案例分析}
-% ============================================================
-
-为了验证模型评分与企业实际经营面貌的一致性，选取三家代表性企业进行深入分析。
-
-\subsection{案例1：E38 — 模型评分最高的企业（0.848，A级）}
-
-\begin{table}[H]
-\centering
-\caption{E38 关键指标与数据集均值对比}
-\label{tab:case1}
-\begin{tabular}{l|c|c|c}
-\toprule
-\textbf{指标} & \textbf{E38的值} & \textbf{附件1均值} & \textbf{解读} \\
-\midrule
-销项总金额 & 数亿元级 & 约1.33亿 & 远超平均，属于头部企业 \\
-利润率 & $>$20\% & 约48\% & 盈利健康 \\
-销项客户数（对数） & 高 & 230 & 客户网络广泛 \\
-收入波动率 & $<$0.5 & 0.91 & 远低于平均，经营稳定 \\
-销项有效率 & $>$99\% & 88\% & 几乎无作废发票，交易规范性极高 \\
-销项作废率 & $<$1\% & 12\% & 极少发票异常 \\
-收入环比增长率 & 温和正增长 & 0.86 & 稳定增长，无异常波动 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-E38在所有维度上均表现出众：规模大、利润高、经营稳定、发票规范、适度增长。银行原始评级为B级，
-模型给出的A级评分结合了客观数据提供的更全面信息。该企业应获得最高额度（100万）和最低利率（4\%）。
-
-\subsection{案例2：E64 — 银行A级但模型C级（0.188，C级）}
-
-\begin{table}[H]
-\centering
-\caption{E64 关键指标分析}
-\label{tab:case2}
-\begin{tabular}{l|c|c|l}
-\toprule
-\textbf{指标} & \textbf{E64的值} & \textbf{均值} & \textbf{风险解读} \\
-\midrule
-销项总金额 & 中等偏上 & 1.33亿 & 实力尚可 \\
-利润率 & 极低 & 48\% & 盈利能力弱——赚得多但留得少 \\
-收入波动率 & $>$2.0 & 0.91 & 月度收入大起大落，现金流不可预测 \\
-成本波动率 & $>$3.0 & 1.22 & 成本控制不稳定 \\
-销项有效率 & 约75\% & 88\% & 四分之一发票存在问题 \\
-收入环比增长率 & $-0.95$ & 0.86 & 最近两月收入断崖式下跌 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-E64虽然在绝对规模上不差，但呈现出\textbf{多重预警信号}：收入剧烈波动 + 成本失控 + 发票有效率低 +
-近期收入暴跌。银行可能基于历史关系或行业地位给了A级，但当前发票数据揭示的风险值得银行重新审视。
-建议给该企业C级对待：中等额度、偏高利率，同时密切监控其经营恢复情况。
-
-\subsection{案例3：E115 — 模型D级且确实违约（0.139，D级，已违约）}
-
-\begin{table}[H]
-\centering
-\caption{E115 关键指标分析}
-\label{tab:case3}
-\begin{tabular}{l|c|c|l}
-\toprule
-\textbf{指标} & \textbf{E115的值} & \textbf{均值} & \textbf{风险解读} \\
-\midrule
-销项总金额 & 极低（$<$百万级） & 1.33亿 & 规模极小 \\
-利润 & 负数 & 约3789万 & 入不敷出 \\
-利润率 & $-100\%$ & 48\% & 持续亏损 \\
-销项作废率 & $>$15\% & 12\% & 高作废率，交易规范性差 \\
-收入波动率 & $>$1.5 & 0.91 & 不稳定 \\
-收入环比增长率 & 负 & 0.86 & 持续下滑 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-E115几乎在所有维度上都处于最差水平：规模极小、持续亏损、发票不规范、经营下滑。
-该企业被模型评为D级且确实为违约企业，验证了模型对\textbf{全面恶化型企业}的有效识别。
-
-\textbf{三个案例的启示}：模型评分并非简单的规模排序，而是对多个风险维度的综合权衡。
-E64（规模较大但多重预警）得分低于一些规模更小但经营稳健的企业，说明模型能够捕捉超越规模的
-深层风险信号。
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\textwidth]{fig_case_radar.png}
-\caption{三家典型企业（E38最优、E64预警、E115违约）的六维风险雷达图。E38在所有维度接近满分；E64的利润率、稳定性和增长趋势维度显著弱化；E115全面崩溃。}
-\label{fig:case_radar}
-\end{figure}
-
-% ============================================================
-\section{信贷策略模型}
-% ============================================================
-
-\subsection{利率-流失率关系}
-
-附件3给出了29组利率-流失率对应数据。对其分别拟合二次多项式：
-
+设归一化加权向量为$\boldsymbol v_i$，正、负理想点为$\boldsymbol v^+$和$\boldsymbol v^-$，则
 \begin{equation}
-L_k(r) = a_k r^2 + b_k r + c_k, \quad k \in \{A,B,C\}
+D_i^+=\|\boldsymbol v_i-\boldsymbol v^+\|_2,
+\quad D_i^-=\|\boldsymbol v_i-\boldsymbol v^-\|_2,
+\quad S_i=\frac{D_i^-}{D_i^++D_i^-}.
 \end{equation}
 
-拟合结果：A级 $R^2=0.993$，B级 $R^2=0.995$，C级 $R^2=0.995$，均接近完美拟合。三条曲线具有
-相同的经济含义：\textbf{流失率随利率加速上升}（二次系数为负值表明曲线凹向原点，低利率区间流失率
-增长缓慢，高利率区间流失率急剧攀升）。这为差异化定价提供了定量依据——对A级企业低利率可以
-``锁定''优质客户（流失率低），对C级企业高利率虽然会增加流失率但利率溢价带来的收入增量可能
-超过流失损失。
+\begin{intuitionbox}{为什么附件2不能重新归一化}
+假设附件1中最高年收入是1000万元，某企业收入500万元，对应相对水平约0.5。如果附件2最高收入只有600万元，并在附件2内重新缩放，同样500万元会变成接近0.83。评分变化来自参照群体而不是企业本身。固定附件1尺度后，同样经营状态得到相同解释。
+\end{intuitionbox}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.82\textwidth]{fig_rate_churn.png}
-\caption{三个信誉等级的利率--流失率拟合曲线。三条曲线均拟合优良（$R^2>0.99$）。在4\%利率时流失率接近0，在15\%时约90\%，为差异化定价提供了精确的量化工具。}
-\label{fig:rate_churn}
+\begin{subfigure}{0.51\textwidth}
+\includegraphics[width=\textwidth]{fig_ranking.png}
+\caption{附件1低风险企业}
+\end{subfigure}\hfill
+\begin{subfigure}{0.45\textwidth}
+\includegraphics[width=\textwidth]{fig_case_radar.png}
+\caption{低、中、高风险企业画像}
+\end{subfigure}
+\caption{PD风险与TOPSIS经营质量的互补解释}
 \end{figure}
 
-\subsection{信贷额度与利率分配}
+TOPSIS得分用于报告排序、个案分析和灵敏度检验，不参与PD档位定义，也不直接决定贷款利率。这样可以避免把主观权重伪装成违约概率，同时保留多指标评价的解释优势。
 
-\textbf{额度分配}遵循三步：
-\begin{enumerate}
-    \item \textbf{筛除}：D级企业不放贷（题目规定）；
-    \item \textbf{比例法}：$L_i = \frac{C_i}{\sum_{j\in\mathcal{E}} C_j} \times \text{Budget}$；
-    \item \textbf{剪裁+再分配}：限制在$[10,100]$万，通过迭代再分配使总额收敛到预算（误差$<0.05\%$）。
-\end{enumerate}
+\section{利率、客户流失与期望收益}
 
-\textbf{利率定价}采用``等级基准+得分微调''双层结构：
-\begin{enumerate}
-    \item \textbf{第一层：按风险等级定基准}。基准利率的设定综合考虑了利率下限（4\%）、
-          流失率曲线（低利率锁定优质客户）、以及不同等级企业的风险溢价；
-    \item \textbf{第二层：同等级内按得分微调}。$r_i = r_{\text{base}} + (0.5 - \text{score\_norm}_i) \times 0.02$，
-          最高得分企业获得最低利率（利率下限4\%），最低得分企业利率上浮1\%。
-\end{enumerate}
+\subsection{为什么利率不能只取最高值}
 
-双层结构的意义在于：\textbf{等级间的利率跳跃反映质的差异（A vs C本质不同），等级内的微小调整
-反映量的差异（同为A级，E38比E89更优）}。
+提高利率会增加每一笔成功贷款的利息，但也可能让客户转向其他银行。特别是低风险企业通常有更多融资渠道，对高利率更敏感。因此利率决策必须同时考虑“每笔赚多少”和“客户是否接受”。
 
-\subsection{问题1与问题2的信贷策略}
+\subsection{保序流失率模型}
 
-问题1中``年度信贷总额固定''但未给定具体数字。本文基于以下推理确定总额为\textbf{8,000万元}：
-\begin{itemize}
-    \item 123家企业，排除D级25家后剩余98家；
-    \item 按10--100万约束，中位数约80万时恰好充分利用预算；
-    \item $98\times 80 = 7,840 \approx 8,000$ 万元。这是一个使约束紧凑（高分企业接近100万、
-          低分企业接近10万）的合理数字。
-\end{itemize}
+附件3的流失率存在少量局部下降点，这可能来自抽样波动。为满足“利率上升时流失率不下降”的经济约束，对A、B、C级分别用PAVA保序回归求解\cite{barlow1972}：
+\begin{equation}
+\min_{\tilde c_1,\ldots,\tilde c_m}\sum_{k=1}^{m}(c_k-\tilde c_k)^2,
+\quad \tilde c_1\le\cdots\le\tilde c_m.
+\end{equation}
+
+PAVA会把违反顺序的相邻点合并为加权平均，直到整条曲线非降。任意候选利率的流失率通过分段线性插值得到；D级不进入定价，因为其被禁贷。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.77\textwidth]{fig_rate_churn.png}
+\caption{单调约束下的利率与客户流失率曲线}
+\end{figure}
+
+\subsection{单位额度期望收益}
+
+设企业$i$的PD为$p_i$，利率为$r$，客户留存率为$q_i(r)=1-c_i(r)$，违约损失率为$L$，资金成本率为$c_f$。每1万元名义授信的期望净收益为
+\begin{equation}
+u_i(r)=q_i(r)\left[(1-p_i)r-p_iL-c_f\right].
+\end{equation}
+
+括号内三项分别是未违约利息、违约损失和资金成本；最外层$q_i(r)$表示只有客户留存时才会实际发生放款。对附件3出现过的利率逐点计算$u_i(r)$，选择最大值对应的利率，避免对观测区间之外进行不可靠外推。
+
+\begin{intuitionbox}{100万元贷款的收益怎么算}
+假设某企业PD为8\%，利率10\%，流失率20\%，则留存率为80\%。取LGD为60\%、资金成本为2.5\%，每1万元的期望净收益为
+\[
+0.8\times[(1-0.08)\times0.10-0.08\times0.60-0.025]=0.0152\text{万元}.
+\]
+如果名义授信100万元，期望净收益约1.52万元。把利率提高后，括号中的利息会增加，但留存率可能下降，净收益不一定提高。
+\end{intuitionbox}
+
+\section{混合整数额度优化}
+
+\subsection{从单户收益到银行组合}
+
+即使知道每家企业的最佳利率和单位收益，也不能逐家独立决定额度，因为所有企业共同占用有限预算。令$x_i$为授信额度，$z_i\in\{0,1\}$表示是否授信，优化模型为
+\begin{align}
+\max_{x,z}\quad &\sum_i u_i^*x_i,\\
+\text{s.t.}\quad &\sum_i x_i=B,\\
+&10z_i\le x_i\le100z_i,\\
+&x_i=0,\quad i\in\{\text{原始D级或预测D级}\}.
+\end{align}
+
+第一条约束要求预算精确使用；第二条把“0或10至100万元”转成线性约束；第三条执行D级禁贷。这是一个混合整数线性规划，连续变量$x_i$决定额度，二元变量$z_i$决定是否入选，由SciPy的MILP求解器求全局最优可行解。
+
+\begin{intuitionbox}{用4家企业理解额度分配}
+假设4家企业的单位收益依次为2.0\%、1.5\%、0.8\%、$-0.2$\%，预算150万元，单户上限100万元。若没有其他约束，模型会先给第一家100万元，再给第二家50万元，而不会为了“平均”把37.5万元分给每家。真实模型同理：额度首先流向单位收益更高的合格企业。
+\end{intuitionbox}
+
+当前目标函数对$x_i$是线性的，且题目只给出统一单户上限，因此最优解通常把入选企业推到100万元上限。若银行希望更加分散，应增加企业申请额度、行业集中度或边际收益递减约束，而不应在求解后随意手工均摊。
+
+\subsection{三问策略结果}
 
 \begin{table}[H]
 \centering
-\caption{两个问题的信贷策略对比}
-\label{tab:strategy_comparison}
-\begin{tabular}{l|c|c}
+\caption{三问信贷策略摘要}
+\begin{tabular}{lrrrr}
 \toprule
-\textbf{指标} & \textbf{问题1（123家，8000万）} & \textbf{问题2（302家，1亿）} \\
+方案 & 放贷企业数 & 额度合计/万元 & 平均利率 & 期望净收益/万元\\
 \midrule
-放贷企业数（占比） & 98家（79.7\%）  & 241家（79.8\%） \\
-不放贷企业数（D级）& 25家            & 61家 \\
-额度范围 & 64--100万      & 31--100万 \\
-额度中位数 & 81万           & 37万 \\
-满额100万企业 & 15家          & 9家 \\
-A级平均利率 & 4.60\%         & 4.68\% \\
-B级平均利率 & 7.38\%         & 7.43\% \\
-C级平均利率 & 10.96\%        & 10.97\% \\
-预期利息收入 & $\approx$570万/年 & $\approx$790万/年 \\
-预算利用率 & 100.0\%         & 100.0\% \\
+问题1 & \PoneLoanCount & \PoneAmount & \PoneAverageRate\% & \PoneNetProfit\\
+问题2 & \PtwoLoanCount & \PtwoAmount & \PtwoAverageRate\% & \PtwoNetProfit\\
+问题3 & \PthreeLoanCount & \PthreeAmount & \PthreeAverageRate\% & \PthreeNetProfit\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-问题2的额度中位数（37万）显著低于问题1（81万），原因是302家企业的得分分布更加分散——
-大量小微企业得分较低导致分配更均匀，而非集中于少数几家头部企业。
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.82\textwidth]{fig_profit_breakdown.png}
+\caption{三问留存后利息、违约损失、资金成本和净收益}
+\end{figure}
 
-% ============================================================
-\section{突发因素下的信贷调整}
-% ============================================================
+\begin{decisionbox}{三问结果如何使用}
+问题1在8000万元假设预算下向\PoneLoanCount 家企业放贷，问题2在1亿元预算下向\PtwoLoanCount 家企业放贷。原始D级获贷企业数为\OriginalDLoanCount，说明准入规则得到严格执行。净收益是模型期望值而不是保证利润，其意义是用于比较策略和资源配置，不是承诺银行一定获得相同金额。
+\end{decisionbox}
 
-\subsection{行业识别}
+\section{疫情冲击下的重新决策}
 
-从企业名称中提取行业关键词进行分类。由于企业名称经过脱敏处理（如``***科技发展有限公司''），
-仅约38\%的企业可精确识别行业。分类结果如下：
-\begin{itemize}
-    \item 严重负面（旅游/酒店/餐饮/影院）：3家；
-    \item 中度负面（建筑/制造/批发零售/物流）：69家；
-    \item 正面/轻影响（医疗/科技/电商/IT）：43家；
-    \item 无法分类（其他）：187家。
-\end{itemize}
+\subsection{行业分类和冲击系数}
 
-\subsection{冲击系数量化}
+根据企业名称中的行业关键词，把企业划分为严重负面、中度负面、正面或轻影响、其他和未知五类。对于仅有“个体经营E编号”而没有行业语义的企业，标记为未知，不强行猜测行业。严重负面、中度负面和正面或轻影响的赔率系数分别为1.30、1.15和0.90，其他与未知取1.00。
 
-冲击系数的设定需要回答一个问题：\textbf{疫情对不同行业企业的一年期违约概率影响有多大？}
-基于清华大学与北京大学对995家中小企业的联合调研以及《清华金融评论》的数据\cite{ref_covid_liu}：
+这些系数是可配置压力情景，不是由当前附件估计出的疫情因果效应。若银行获得正式行业代码和疫情期间违约数据，应重新估计行业冲击。
 
-\begin{itemize}
-    \item 旅游/餐饮/酒店业：2020年春节黄金周收入损失超过\textbf{5,000亿元}，行业平均营收预计下降
-          \textbf{50\%以上}，约\textbf{85\%}的企业现金储备不足以支撑3个月。据此估计违约概率上升
-          约30--50\%，取保守值30\%，对应冲击系数 $S=1.30$；
-    \item 制造/建筑/批发零售业：受供应链中断和消费萎缩双重影响，约\textbf{58\%}的中小企业预计
-          2020年营收降幅超过50\%。考虑到这些行业有一定资产可变现，估计违约概率上升约15\%，
-          对应 $S=1.15$；
-    \item 医疗/科技/电商行业：在疫情期间需求反而增长。医疗行业订单量上升、在线服务需求激增。
-          估计违约概率下降约10\%，对应 $S=0.90$。
-\end{itemize}
+\subsection{为什么冲击作用于赔率}
 
-冲击系数的经济含义是：$S_k = \frac{\text{调整后违约概率}}{\text{调整前违约概率}}$。
-TOPSIS得分除以冲击系数即可获得调整后的风险排序：$C'_i = C_i / S_k$。
+概率不能无限放大，直接计算$k_ip_i$在高PD时可能超过1。赔率定义为$p/(1-p)$，取正值且没有1的上界，因此令
+\begin{equation}
+\operatorname{odds}(p_i')=k_i\operatorname{odds}(p_i),
+\qquad
+p_i'=\frac{k_ip_i}{1-p_i+k_ip_i}.
+\end{equation}
 
-\subsection{调整结果}
+\begin{intuitionbox}{赔率调整示例}
+若企业原PD为20\%，原赔率为$0.20/0.80=0.25$。严重负面冲击系数1.30使赔率变为0.325，对应新PD为$0.325/(1+0.325)\approx24.5\%$。新概率始终位于0和1之间，而且对原本高风险企业不会产生越界值。
+\end{intuitionbox}
 
-共83家企业（27.5\%）的风险等级发生了变化。严重负面行业的3家企业平均贷款额度从40.1万骤降至
-22.4万（下降44\%），利率从5.72\%升至约6.8\%；正面行业的43家企业平均额度从30.7万升至37.5万
-（上升22\%），利率获得约1\%的优惠。调整方向符合政策直觉：\textbf{保护受冲击企业的最有效方式
-不是增加贷款（可能变成坏账），而是将有限的信贷资源向抗风险能力强的行业倾斜}。
+调整PD后重新划分等级，再重新选择利率并运行MILP。这样受冲击企业不仅额度可能下降，利率、准入状态和组合中的相对位置也会同步变化。最终共有\EmergencyChanges 家企业跨越风险等级阈值。
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.82\textwidth]{fig_covid.png}
-\caption{疫情对各行业贷款额度的影响。严重负面行业额度骤降44\%，正面行业额度上升22\%，反映了将有限信贷资源向抗风险能力强的行业倾斜的危机管理逻辑。}
-\label{fig:covid}
+\caption{疫情赔率冲击前后各行业类别的平均授信额度}
 \end{figure}
 
-% ============================================================
-\section{灵敏度分析与鲁棒性}
-% ============================================================
+\begin{decisionbox}{压力测试而不是精确预测}
+行业关键词来自脱敏名称，部分企业无法可靠识别。问题3的价值是展示“冲击发生后如何重新决策”的机制，而不是宣称已经准确预测疫情影响。正式应用中应把关键词分类替换为标准行业代码，并用多个冲击系数形成轻度、中度和重度情景。
+\end{decisionbox}
 
-\subsection{权重扰动}
+\section{灵敏度与稳健性分析}
 
-对每个指标权重进行100次随机$\pm 10\%$独立扰动，比较扰动后企业排名与原始排名的秩相关性：
-Spearman相关系数均值为0.965，Kendall相关系数均值为0.848。Spearman > 0.85说明模型排名
-对权重扰动具有高度稳健性——即使某个指标的权重被错误设定10\%，最终排名也不会发生剧烈变化。
+\subsection{真实权重扰动}
+
+对TOPSIS基准权重进行100次独立扰动，每个权重乘以$U(0.8,1.2)$后重新归一化。每次都从原始特征重新计算TOPSIS得分和完整排名，再与基准排名计算Spearman和Kendall相关系数，而不是围绕某个预设均值随机生成相关系数。
+
+Spearman均值为\SensitivityMean，最小值为\SensitivityMin；Kendall均值为\SensitivityKendall。另逐一移除指标并重新计算，影响最大的指标为“\SensitivityIndicator”，移除后的Spearman相关系数为\SensitivityRemoval。
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.85\textwidth]{fig_sensitivity.png}
-\caption{100次随机权重扰动（$\pm$10\%）的Spearman相关系数分布。均值0.965远高于0.85稳健性阈值，最小值为0.949，证明模型排名对权重设定不敏感。}
-\label{fig:sensitivity}
+\includegraphics[width=0.82\textwidth]{fig_sensitivity.png}
+\caption{100次TOPSIS权重扰动的真实排名相关系数}
 \end{figure}
 
-\subsection{指标的独立贡献}
+\begin{intuitionbox}{相关系数接近1表示什么}
+Spearman相关系数比较两次排名的先后顺序。接近1表示权重稍微变化时，大多数企业仍处于相近位置。它说明TOPSIS解释排名对小幅权重误差较稳定，但不代表PD模型、LGD或资金成本也已经完成同样的敏感性检验。
+\end{intuitionbox}
 
-逐一移除每个指标后重新计算排名。移除收入环比增长率后Spearman相关系数最低（0.026），
-这反映了该指标对排名的影响最大——但它同时也说明组合赋权（$\alpha=0.6$）起到了预期的
-``牵制''作用：如果完全采用熵权法（$\alpha=0$），该指标将完全主导排名。
+\section{模型评价、局限与扩展}
 
-% ============================================================
-\section{模型的优点与局限}
-% ============================================================
-
-\subsection{优点}
+\subsection{模型优点}
 
 \begin{enumerate}
-    \item \textbf{主客观融合的赋权策略}：AHP（60\%）+ 熵权（40\%）的组合避免了纯主观的随意性
-          和纯客观被噪声误导的双重风险，$\alpha=0.6$的选择经过了违约分离度检验；
-    \item \textbf{可解释的指标体系}：每个指标都对应明确的信贷风控含义（能力/稳定性/意愿/前景），
-          且经过合理的数学变换（对数压缩、指数惩罚、截断处理）；
-    \item \textbf{严格单调的违约率验证}：模型给出的风险排序与实际违约率完全单调，D级违约率56.0\%
-          是A级的5.6倍，证明模型具有真实的违约识别能力；
-    \item \textbf{有依据的冲击量化}：疫情冲击系数基于公开的学术调研数据而非凭空设定；
-    \item \textbf{已验证的鲁棒性}：Spearman $\rho=0.965$ 证明模型对权重设定不敏感。
+\item 风险主模型直接学习违约标签，且所有性能指标来自嵌套样本外预测；
+\item 发票净额保留负数经济含义，连续月历显式记录经营断档；
+\item 附件2不重复拟合缩放尺度，PD和TOPSIS解释具有统一参照；
+\item 流失率满足经济意义上的单调性，利率同时考虑收入和客户接受行为；
+\item 额度优化严格执行预算、单户上下限和D级禁贷，并导出收益拆分；
+\item 图表、Excel、网页和论文数字由同一次运行生成，降低手工抄录错误。
 \end{enumerate}
 
-\subsection{局限与改进方向}
+\subsection{主要局限}
 
-\begin{enumerate}
-    \item \textbf{时序信息的利用不充分}：当前模型仅使用了聚合统计量和环比增长率，未利用发票的
-          完整时间序列。例如，收入``先升后降''与``先降后升''在聚合指标中可能看起来相同，
-          但信用含义截然不同。引入时间序列特征（如趋势斜率、拐点检测）可能提升预测精度；
-    \item \textbf{行业分类精度不足}：62\%的企业名称无法识别行业。可考虑利用发票中的交易对手信息
-          进行行业推断——例如供应商和客户的行业分布可以侧面反映企业所处产业链位置；
-    \item \textbf{信贷策略未使用优化模型}：当前采用规则化的比例分配+分级定价。更精确的方法
-          是将利率和额度作为连续决策变量，构建以银行期望收益最大化为目标的非线性规划模型，
-          用启发式算法（粒子群、遗传算法）求解；
-    \item \textbf{未利用上下游网络信息}：发票数据本质上是企业间的交易图谱。图神经网络（GNN）
-          可捕捉``交易对手的对手违约了，我的风险也会上升''的传染效应。
-\end{enumerate}
+第一，附件1只有123家企业，无法充分覆盖所有行业和经营状态。当前样本外验证比训练内评价可靠，但仍不能替代跨年份、跨地区的外部验证。
 
-% ============================================================
+第二，LGD为60\%、资金成本为2.5\%、问题1预算为8000万元，这些是显式情景假设，不是附件直接给出的事实。银行应按真实参数重跑，并比较参数变化对企业入选名单和收益的影响。
+
+第三，模型假定PD在利率选择阶段不随利率变化。现实中高利率可能增加企业偿债压力，使PD进一步上升。若有历史定价和贷后表现数据，可建立利率、PD和流失率的联合模型。
+
+第四，疫情行业识别依赖脱敏名称，信息不足的企业只能标记为未知。冲击结果适合用于压力测试，不适合作为真实行业风险的精确估计。
+
+第五，当前线性目标会把入选企业推向单户上限，尚未包含企业真实资金需求、行业集中度、资本占用和组合尾部风险。
+
+\subsection{扩展方向}
+
+获得新增样本后，可按时间滚动进行外部验证和概率再校准；获得回收数据后，可把LGD从常数扩展为企业层面模型；获得申请额度后，可把单户上限改为100万元与实际需求的较小值；需要控制组合风险时，可增加行业额度上限、期望损失上限或CVaR约束。上述扩展均不改变“PD估计、定价、组合优化”的主体结构。
+
 \section{结论}
-% ============================================================
 
-本文从中小微企业信贷决策的实际需求出发，基于发票数据构建了完整的风险量化与信贷策略框架。
-核心贡献在于：（1）建立了\textbf{主客观融合}（AHP+熵权）的赋权方法和TOPSIS评价模型，
-经验证能有效区分违约与正常企业；（2）通过三家典型企业的案例分析，展示了模型评分与
-实际经营面貌的一致性；（3）为三个问题分别给出了\textbf{数据驱动、逻辑自洽、定量可验}
-的信贷策略方案。
+本文从发票净额和经营连续性出发，建立带正则、类别平衡和先验校正的监督PD模型，并用重复嵌套交叉验证获得严格样本外结果。模型ROC-AUC达到\ModelAUC，A至D档实际违约率依次上升，能够集中识别高风险企业。TOPSIS被限定为经营质量辅助解释工具，从而避免综合评分与违约概率的概念混淆。
 
-在总额约束下，D级企业不放贷是基于风险控制的审慎原则；A/B/C级企业的差异化额度与利率
-是基于``高风险高利率、低风险低利率''的市场化定价原则；疫情调整策略则是基于
-``将有限资源向抗风险能力强的企业倾斜''的危机管理原则。
+进一步地，本文用保序回归建立利率与客户流失率的单调关系，把留存后利息、违约损失和资金成本合并为单位额度期望收益，再通过混合整数规划满足预算、准入和单户额度约束。三问预算均被精确满足，原始D级获贷企业数为\OriginalDLoanCount。疫情情景通过赔率调整后触发完整的重新评级、定价和额度优化。
 
-模型的工程实现使用了SQLite处理百万级发票数据，Python科学计算生态（NumPy/Pandas/Matplotlib）
-完成建模与可视化，完整代码开源托管于：\\
-\url{https://github.com/wanbro333/evalution_model_test}
+模型的核心不是给企业生成一个孤立分数，而是建立从数据口径、风险概率、客户行为到银行资源配置的一致链条。每一步都能解释、复算和替换参数，这使模型既适合数学建模竞赛展示，也为后续接入真实银行数据保留了扩展空间。
 
-\begin{thebibliography}{99}
-
-\bibitem{saaty} Saaty T L. \textit{The Analytic Hierarchy Process}. McGraw-Hill, 1980.
-
-\bibitem{hwang} Hwang C L, Yoon K. \textit{Multiple Attribute Decision Making}. Springer, 1981.
-
-\bibitem{shannon} Shannon C E. A mathematical theory of communication. \textit{Bell System Technical Journal}, 1948, 27(3): 379--423.
-
-\bibitem{cheng} 程扬, 周大勇, 程帆等. 基于组合赋权法的中小微企业信贷风险量化及预测. \textit{系统工程}, 2023, 41(1): 140--151.
-
-\bibitem{luo} 罗胜尹, 彭睿杰, 胡静. 基于中小微企业信贷风险和银行收益的信贷决策研究. \textit{中国集体经济}, 2021(27): 79--80.
-
-\bibitem{ref_covid_liu} 刘超, 王海军. 新冠肺炎疫情对中小企业的冲击与金融纾困. \textit{清华金融评论}, 2020(6).
-
-\bibitem{ref_covid_cba} 中国银行业协会. 新冠肺炎疫情下的中小微企业经营风险分析和应对. 2020年4月.
-
-\bibitem{ref_tsinghua} 清华大学商业模式创新研究中心, 北京大学汇丰商学院. 995家中小企业受疫情影响调研报告. 2020年2月.
-
+\begin{thebibliography}{9}
+\small
+\setlength{\itemsep}{0pt}
+\setlength{\parskip}{0pt}
+\bibitem{hosmer2013} Hosmer D W, Lemeshow S, Sturdivant R X. Applied Logistic Regression. Wiley, 2013.
+\bibitem{hastie2009} Hastie T, Tibshirani R, Friedman J. The Elements of Statistical Learning. Springer, 2009.
+\bibitem{hwang1981} Hwang C L, Yoon K. Multiple Attribute Decision Making: Methods and Applications. Springer, 1981.
+\bibitem{barlow1972} Barlow R E, Bartholomew D J, Bremner J M, Brunk H D. Statistical Inference under Order Restrictions. Wiley, 1972.
 \end{thebibliography}
 
 \end{document}

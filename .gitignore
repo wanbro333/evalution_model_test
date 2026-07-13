@@ -1,6 +1,7 @@
 # Python
 __pycache__/
 *.pyc
+.pytest_cache/
 
 # Database (large)
 credit_data.db
@@ -17,14 +18,22 @@ paper.synctex.gz
 *.out
 *.toc
 *.synctex.gz
-
-# Original data (large, proprietary)
-附件*.xlsx
+*.fdb_latexmk
+*.fls
+*.xdv
 
 # Temp files
 *.tmp
 tmp/
 .DS_Store
+qa_*.png
+~$*
 
 # Build
 build/
+
+# Local editor and agent settings
+.agents/
+.claude/
+.idea/
+.vscode/

@@ -1,0 +1,216 @@
+{
+  "generated_at": "2026-07-13T18:38:49+08:00",
+  "model_version": "2.0-supervised-pd",
+  "random_seed": 20200713,
+  "assumptions": {
+    "problem1_budget_wan": 8000.0,
+    "problem2_budget_wan": 10000.0,
+    "lgd": 0.6,
+    "funding_cost": 0.025,
+    "loan_min_wan": 10.0,
+    "loan_max_wan": 100.0,
+    "grade_thresholds": {
+      "A": [
+        0.0,
+        0.1
+      ],
+      "B": [
+        0.1,
+        0.2
+      ],
+      "C": [
+        0.2,
+        0.4
+      ],
+      "D": [
+        0.4,
+        1.01
+      ]
+    }
+  },
+  "validation": {
+    "roc_auc": 0.8557098765432098,
+    "pr_auc": 0.7338615243249608,
+    "brier": 0.10655829276355398,
+    "log_loss": 0.35707061771543547,
+    "base_default_rate": 0.21951219512195122,
+    "grade_table": [
+      {
+        "风险等级": "A",
+        "企业数": 56,
+        "违约数": 3,
+        "实际违约率": 0.05357142857142857,
+        "平均预测PD": 0.05588019199871901
+      },
+      {
+        "风险等级": "B",
+        "企业数": 32,
+        "违约数": 4,
+        "实际违约率": 0.125,
+        "平均预测PD": 0.13582089535661296
+      },
+      {
+        "风险等级": "C",
+        "企业数": 15,
+        "违约数": 4,
+        "实际违约率": 0.26666666666666666,
+        "平均预测PD": 0.2883086287319914
+      },
+      {
+        "风险等级": "D",
+        "企业数": 20,
+        "违约数": 16,
+        "实际违约率": 0.8,
+        "平均预测PD": 0.6112025390077414
+      }
+    ]
+  },
+  "data_summary": {
+    "attachment1_enterprises": 123,
+    "attachment1_input_invoices": 210947,
+    "attachment1_output_invoices": 162484,
+    "attachment2_enterprises": 302,
+    "attachment2_input_invoices": 395175,
+    "attachment2_output_invoices": 330835,
+    "rate_churn_rows": 29
+  },
+  "model": {
+    "final_l2": 0.1,
+    "feature_count": 16,
+    "attachment1_grade_distribution": {
+      "A": 56,
+      "B": 32,
+      "D": 20,
+      "C": 15
+    },
+    "attachment2_grade_distribution": {
+      "A": 157,
+      "B": 68,
+      "D": 40,
+      "C": 37
+    }
+  },
+  "strategy1": {
+    "loan_count": 80,
+    "total_amount": 8000.0,
+    "average_amount": 100.0,
+    "minimum_amount": 100.0,
+    "maximum_amount": 100.0,
+    "average_rate": 0.12309999999999999,
+    "expected_net_profit": 70.54063929860084,
+    "expected_disbursement": 1638.4456447504406,
+    "retained_interest": 175.57695156542783,
+    "expected_default_loss": 64.07517114806598,
+    "expected_funding_cost": 40.961141118761006
+  },
+  "strategy2": {
+    "loan_count": 100,
+    "total_amount": 10000.0,
+    "average_amount": 100.0,
+    "minimum_amount": 100.0,
+    "maximum_amount": 100.0,
+    "average_rate": 0.10278000000000004,
+    "expected_net_profit": 133.5551668100593,
+    "expected_disbursement": 2832.93917461599,
+    "retained_interest": 267.37537514690996,
+    "expected_default_loss": 62.996728971450935,
+    "expected_funding_cost": 70.82347936539976
+  },
+  "strategy3": {
+    "loan_count": 100,
+    "total_amount": 10000.0,
+    "average_amount": 100.0,
+    "minimum_amount": 100.0,
+    "maximum_amount": 100.0,
+    "average_rate": 0.10346000000000004,
+    "expected_net_profit": 132.1939475171674,
+    "expected_disbursement": 2812.354259786034,
+    "retained_interest": 265.7271428029424,
+    "expected_default_loss": 63.22433879112418,
+    "expected_funding_cost": 70.30885649465087
+  },
+  "original_d_loan_count": 0,
+  "original_d_loan_amount": 0.0,
+  "emergency_grade_changes": 8,
+  "industry_summary": [
+    {
+      "行业类别": "严重负面",
+      "企业数": 3,
+      "调整前平均额度": 100.0,
+      "调整后平均额度": 100.0,
+      "调整前平均利率": 0.10116666666666667,
+      "调整后平均利率": 0.11583333333333333,
+      "调整前平均PD": 0.04193133184811754,
+      "调整后平均PD": 0.05382187044856562
+    },
+    {
+      "行业类别": "中度负面",
+      "企业数": 82,
+      "调整前平均额度": 24.390243902439025,
+      "调整后平均额度": 19.51219512195122,
+      "调整前平均利率": 0.11458536585365853,
+      "调整后平均利率": 0.11751219512195121,
+      "调整前平均PD": 0.1858276680457564,
+      "调整后平均PD": 0.20269687305489054
+    },
+    {
+      "行业类别": "其他",
+      "企业数": 118,
+      "调整前平均额度": 33.05084745762712,
+      "调整后平均额度": 35.59322033898305,
+      "调整前平均利率": 0.10829237288135593,
+      "调整后平均利率": 0.10829237288135593,
+      "调整前平均PD": 0.17951905981951938,
+      "调整后平均PD": 0.17951905981951938
+    },
+    {
+      "行业类别": "未知",
+      "企业数": 56,
+      "调整前平均额度": 44.642857142857146,
+      "调整后平均额度": 44.642857142857146,
+      "调整前平均利率": 0.09961607142857143,
+      "调整后平均利率": 0.09961607142857143,
+      "调整前平均PD": 0.16189516416736535,
+      "调整后平均PD": 0.16189516416736535
+    },
+    {
+      "行业类别": "正面/轻影响",
+      "企业数": 43,
+      "调整前平均额度": 30.232558139534884,
+      "调整后平均额度": 32.55813953488372,
+      "调整前平均利率": 0.11563953488372093,
+      "调整后平均利率": 0.11434883720930232,
+      "调整前平均PD": 0.20262652167463857,
+      "调整后平均PD": 0.19073132232430842
+    }
+  ],
+  "sensitivity": {
+    "trial_count": 100,
+    "spearman_mean": 0.99825643935974,
+    "spearman_min": 0.9957565360952393,
+    "kendall_mean": 0.9729334932693589,
+    "kendall_min": 0.9533519925363187,
+    "most_influential_indicator": "年化利润",
+    "most_influential_removal_spearman": 0.9149694960725389
+  },
+  "churn_diagnostics": {
+    "A": {
+      "raw_monotonic_violations": 3,
+      "rmse": 0.0018191642911380556,
+      "churn_at_4pct": 0.0,
+      "churn_at_15pct": 0.922060686952494
+    },
+    "B": {
+      "raw_monotonic_violations": 2,
+      "rmse": 0.0019486968959365638,
+      "churn_at_4pct": 0.0,
+      "churn_at_15pct": 0.885864918999995
+    },
+    "C": {
+      "raw_monotonic_violations": 2,
+      "rmse": 0.0014060712208992692,
+      "churn_at_4pct": 0.0,
+      "churn_at_15pct": 0.895164738662031
+    }
+  }
+}
